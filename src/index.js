@@ -30,13 +30,8 @@ if (!fs.existsSync(DATA_DIR)) {
 
 const configManager = new StorageManager(path.join(DATA_DIR, 'config.json'), {
     llm_provider: 'ollama',
-<<<<<<< copilot/verify-ollama-functionality
-    model_name: 'qwen2.5:0.5b',
-    agent_profile: 'high', // 'low' or 'high'
-=======
     model_name: 'llama3.2:1b',
     power_mode: 'LOW_POWER', // LOW_POWER (Raspberry Pi/Edge) or HIGH_POWER (Desktop/Cloud)
->>>>>>> main
     approved_telegram_ids: [],
     enable_web: true,
     web_port: 3000
