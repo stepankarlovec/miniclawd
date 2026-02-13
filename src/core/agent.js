@@ -31,6 +31,7 @@ export class Agent {
 
     async run(userInput, onUpdate = null) {
         // Add user message to memory
+        await this.memory.init();
         this.memory.addMessage('user', userInput);
 
         let turns = 0;
