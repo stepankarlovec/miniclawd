@@ -245,6 +245,24 @@ You: Show memory usage
 Agent: (uses get_memory_stats tool)
 ```
 
+## 🧪 Testing
+
+Run the test suite to verify installation:
+```bash
+# Run all tests
+npm test
+
+# Run interactive demonstration
+npm run test:demo
+```
+
+The test suite verifies:
+- ✅ LOW POWER mode configuration
+- ✅ HIGH POWER mode configuration
+- ✅ Backward compatibility with legacy profiles
+- ✅ Memory limits for each mode
+- ✅ Agent reasoning loop execution
+
 ## 🔒 Security Notes
 
 - Gmail OAuth credentials stored in `data/gmail_credentials.json`
@@ -321,7 +339,18 @@ const memoryOptions = {
 
 ## 📈 Changelog
 
-### v1.1.0 (Current)
+### v1.2.0 (Current - Power Modes Update)
+- ✅ **LOW POWER Mode**: Optimized for Raspberry Pi/Edge devices (minimal memory, concise prompts)
+- ✅ **HIGH POWER Mode**: Full-featured agent for desktop/cloud (extended history, detailed reasoning)
+- ✅ Power mode normalization with backward compatibility
+- ✅ Enhanced model selection (support for llama3.2:1b, qwen:0.5b, and larger models)
+- ✅ Updated setup wizard with clear power mode options
+- ✅ Fixed JSON parsing bug for nested objects
+- ✅ Fixed tool execution bug (execute method)
+- ✅ Comprehensive test suite
+- ✅ Updated documentation with power mode explanations
+
+### v1.1.0
 - ✅ Memory auto-pruning with circular buffer
 - ✅ Hardware metrics caching (5s TTL)
 - ✅ Pre-compiled regex patterns
