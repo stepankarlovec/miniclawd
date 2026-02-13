@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { SystemHealthCheck } from './health.js';
+import { AVAILABLE_MODELS } from '../config/models.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +36,15 @@ export class WebServer {
     }
 
     setupRoutes() {
+        // API: Get Available Models
+        this.app.get('/api/models', (req, res) => {
+            try {
+                res.json(AVAILABLE_MODELS);
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
+
         // API: Config (Get)
         this.app.get('/api/config', (req, res) => {
             try {
@@ -62,6 +72,11 @@ export class WebServer {
 
                 await this.configManager.update(newConfig);
 
+                // Check if provider or model changed - if so, trigger restart
+                const providerChanged = newConfig.llm_provider && newConfig.llm_provider !== currentConfig.llm_provider;
+                const modelChanged = newConfig.model_name && newConfig.model_name !== currentConfig.model_name;
+                const needsRestart = providerChanged || modelChanged;
+
                 // Hot-reload Agent Profile
                 if (newConfig.agent_profile && newConfig.agent_profile !== this.agent.profile) {
                     this.agent.profile = newConfig.agent_profile;
@@ -78,7 +93,25 @@ export class WebServer {
                     console.log(chalk.blue(`[System] Hot-swapped Agent Profile to: ${this.agent.profile}`));
                 }
 
-                res.json({ success: true, message: "Configuration saved." });
+                res.json({ success: true, message: "Configuration saved.", needsRestart });
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
+
+        // API: Restart Application
+        this.app.post('/api/system/restart', async (req, res) => {
+            try {
+                console.log(chalk.yellow('[System] Restart requested via API'));
+                res.json({ success: true, message: 'Application restarting...' });
+                
+                // Give response time to reach client
+                setTimeout(() => {
+                    console.log(chalk.red('[System] Restarting application...'));
+                    // Note: Requires a process manager (systemd, pm2, etc.) to automatically restart
+                    // If running manually, you'll need to restart the process yourself
+                    process.exit(0); // Exit cleanly, process manager will restart
+                }, 500);
             } catch (error) {
                 res.status(500).json({ error: error.message });
             }

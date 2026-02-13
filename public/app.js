@@ -1,4 +1,4 @@
-const socket = io();
+const socket = typeof io !== 'undefined' ? io() : null;
 const chatWindow = document.getElementById('chat-window');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
@@ -97,6 +97,38 @@ async function switchView(viewName) {
 }
 
 // --- Settings Logic ---
+let availableModels = {};
+
+async function loadAvailableModels() {
+    try {
+        const res = await fetch('/api/models');
+        availableModels = await res.json();
+    } catch (e) {
+        console.error("Failed to load available models", e);
+    }
+}
+
+function updateModelDropdown(provider) {
+    const modelSelect = document.getElementById('cfg-model');
+    const models = availableModels[provider] || [];
+    
+    modelSelect.innerHTML = '';
+    models.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.value;
+        option.textContent = `${model.label} - ${model.description}`;
+        modelSelect.appendChild(option);
+    });
+}
+
+// Load models on startup
+loadAvailableModels();
+
+// Update model dropdown when provider changes
+document.getElementById('cfg-provider').addEventListener('change', (e) => {
+    updateModelDropdown(e.target.value);
+});
+
 async function loadConfig() {
     try {
         const res = await fetch('/api/config');
@@ -104,7 +136,11 @@ async function loadConfig() {
 
         document.getElementById('cfg-profile').value = config.agent_profile || 'high';
         document.getElementById('cfg-provider').value = config.llm_provider || 'ollama';
+        
+        // Update model dropdown based on provider, then set selected model
+        updateModelDropdown(config.llm_provider || 'ollama');
         document.getElementById('cfg-model').value = config.model_name || '';
+        
         document.getElementById('cfg-openai').value = config.openai_api_key || '';
         document.getElementById('cfg-telegram').value = config.telegram_token || '';
         document.getElementById('cfg-gmail-id').value = config.gmail_client_id || '';
@@ -120,12 +156,32 @@ configForm.onsubmit = async (e) => {
     const data = Object.fromEntries(formData.entries());
 
     try {
-        await fetch('/api/config', {
+        const res = await fetch('/api/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        alert("Configuration saved! Please restart the agent if you changed critical settings.");
+        const result = await res.json();
+        
+        if (result.needsRestart) {
+            // Show restart notification
+            if (confirm("Provider or model changed. The application needs to restart. Restart now?")) {
+                addLog("Restarting application...", 'warning');
+                
+                // Call restart endpoint
+                await fetch('/api/system/restart', { method: 'POST' });
+                
+                // Show restart message
+                alert("Application is restarting... Please wait 10 seconds and the page will reload automatically.");
+                
+                // Wait a bit then reload page
+                setTimeout(() => {
+                    window.location.reload();
+                }, 10000); // Wait 10 seconds to allow server to restart
+            }
+        } else {
+            alert("Configuration saved successfully!");
+        }
     } catch (e) {
         alert("Error saving config: " + e.message);
     }
@@ -204,15 +260,22 @@ function addMessageToUI(role, content) {
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
+// Helper function to add a simple bubble message
+function addBubble(content, role = 'assistant') {
+    addMessageToUI(role, content);
+}
+
 // Thought Visibility Toggle
 let showThoughts = true;
+let statusMsgId = null;
 
 // Add Toggle Control to Header (dynamically if needed, or assume it exists)
 // For now, let's just create a button in the UI or check a config
 // We'll expose a window function to toggle it via console or new UI button if added
 
-socket.on('agent-activity', (data) => {
-    const chatWindow = document.getElementById('chat-window');
+if (socket) {
+    socket.on('agent-activity', (data) => {
+        const chatWindow = document.getElementById('chat-window');
 
     // Remove existing status if exists
     if (statusMsgId) {
@@ -269,6 +332,7 @@ socket.on('agent-activity', (data) => {
     chatWindow.appendChild(div);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 });
+}
 
 // Helper to switch mode programmatically
 async function switchMode(profile) {
