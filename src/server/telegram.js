@@ -50,12 +50,19 @@ export class TelegramBot {
 
             // 2. Approved -> Send to Agent
             await ctx.sendChatAction('typing');
+
+            // Temporary Debug Reply (Remove later if annoying, but good for feedback now)
+            // await ctx.reply("Wait a second..."); 
+
             try {
-                const response = await this.agent.run(text); // Agent.run returns string
+                console.log(chalk.cyan(`[Telegram] Sending text to agent: "${text}"`));
+                const response = await this.agent.run(text);
+                console.log(chalk.cyan(`[Telegram] Agent response len: ${response.length}`));
+
                 await ctx.reply(response);
             } catch (error) {
-                console.error("Agent Error:", error);
-                await ctx.reply("Sorry, I encountered an error processing your request.");
+                console.error(chalk.red("Telegram Agent Error:"), error);
+                await ctx.reply(`❌ Error: ${error.message}`);
             }
         });
     }

@@ -179,66 +179,12 @@ function addMessageToUI(role, content) {
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-async function sendMessage() {
-    const text = userInput.value.trim();
-    if (!text) return;
+// Thought Visibility Toggle
+let showThoughts = true;
 
-    addMessageToUI('user', text);
-    userInput.value = '';
-
-    try {
-        const res = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
-        });
-        const data = await res.json();
-        addMessageToUI('assistant', data.response);
-    } catch (err) {
-        addMessageToUI('assistant', 'Error: ' + err.message);
-    }
-}
-
-sendBtn.addEventListener('click', sendMessage);
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-});
-
-// Socket Events
-socket.on('bot-request', (data) => {
-    if (document.getElementById(`req-${data.chatId}`)) return;
-    const li = document.createElement('li');
-    li.id = `req-${data.chatId}`;
-    li.classList.add('approval-item');
-    li.innerHTML = `
-        <span><strong>${data.username || 'User'}</strong> (${data.chatId})</span>
-        <div>
-            <button class="approval-btn" onclick="approveUser('${data.chatId}')">Approve</button>
-            <button class="approval-btn deny" onclick="denyUser('${data.chatId}')">Deny</button>
-        </div>
-    `;
-    approvalList.appendChild(li);
-    document.getElementById('no-pending').style.display = 'none';
-});
-
-socket.on('bot-access-granted', (data) => {
-    const li = document.getElementById(`req-${data.chatId}`);
-    if (li) li.remove();
-    checkPending();
-});
-
-socket.on('bot-access-rejected', (data) => {
-    const li = document.getElementById(`req-${data.chatId}`);
-    if (li) li.remove();
-    checkPending();
-});
-
-socket.on('system-log', (data) => {
-    addLog(data.message, data.type);
-});
-
-// Real-time Agent Activity
-let statusMsgId = null;
+// Add Toggle Control to Header (dynamically if needed, or assume it exists)
+// For now, let's just create a button in the UI or check a config
+// We'll expose a window function to toggle it via console or new UI button if added
 
 socket.on('agent-activity', (data) => {
     const chatWindow = document.getElementById('chat-window');
@@ -251,6 +197,27 @@ socket.on('agent-activity', (data) => {
     }
 
     if (data.type === 'done' || data.type === 'answer') return;
+
+    // Handle Thoughts
+    if (data.type === 'thought') {
+        if (!showThoughts) return; // Skip if disabled
+
+        const div = document.createElement('div');
+        div.classList.add('message', 'assistant', 'thought-bubble');
+        // Use details/summary for collapsible thinking
+        div.innerHTML = `
+            <div class="avatar">🧠</div>
+            <div class="bubble thought">
+                <details open>
+                    <summary>Thinking Process</summary>
+                    <div class="thought-content">${data.message.replace(/\n/g, '<br>')}</div>
+                </details>
+            </div>
+        `;
+        chatWindow.appendChild(div);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return;
+    }
 
     // Create new status bubble
     const div = document.createElement('div');
@@ -277,6 +244,70 @@ socket.on('agent-activity', (data) => {
     chatWindow.appendChild(div);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 });
+
+// Slash command to toggle thoughts
+async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text) return;
+
+    // --- SLASH COMMANDS ---
+    if (text.startsWith('/')) {
+        const cmd = text.split(' ')[0].toLowerCase();
+
+        if (cmd === '/clear') {
+            document.getElementById('chat-window').innerHTML = '';
+            addLog('Chat cleared', 'info');
+            userInput.value = '';
+            return;
+        }
+
+        if (cmd === '/thoughts') {
+            showThoughts = !showThoughts;
+            addBubble(showThoughts ? '🧠 Thoughts ENABLED' : '🧠 Thoughts DISABLED', 'assistant');
+            userInput.value = '';
+            return;
+        }
+
+        if (cmd === '/fast' || cmd === '/chat') {
+            await switchMode('chat');
+            addBubble('⚡ Switched to Fast Mode', 'assistant');
+            userInput.value = '';
+            return;
+        }
+
+        if (cmd === '/work' || cmd === '/low' || cmd === '/high') {
+            await switchMode('low');
+            addBubble('🛠️ Switched to Work Mode', 'assistant');
+            userInput.value = '';
+            return;
+        }
+
+        if (cmd === '/help') {
+            addBubble(`Available Commands:
+/fast - Fast Mode
+/work - Work Mode
+/thoughts - Toggle Thinking Display
+/clear - Clear Chat`, 'assistant');
+            userInput.value = '';
+            return;
+        }
+    }
+
+    addMessageToUI('user', text);
+    userInput.value = '';
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        });
+        const data = await res.json();
+        addMessageToUI('assistant', data.response);
+    } catch (err) {
+        addMessageToUI('assistant', 'Error: ' + err.message);
+    }
+}
 
 window.approveUser = async (chatId) => {
     await fetch('/api/auth/approve', {

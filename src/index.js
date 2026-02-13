@@ -28,7 +28,7 @@ if (!fs.existsSync(DATA_DIR)) {
 
 const configManager = new StorageManager(path.join(DATA_DIR, 'config.json'), {
     llm_provider: 'ollama',
-    model_name: 'llama3.2:1b',
+    model_name: 'gwen3:0.6b',
     agent_profile: 'high', // 'low' or 'high'
     approved_telegram_ids: [],
     enable_web: true,

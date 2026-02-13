@@ -9,6 +9,8 @@ export class StorageManager {
     }
 
     async init() {
+        if (this.data) return; // Cache hit: already initialized
+
         try {
             await fs.mkdir(path.dirname(this.filePath), { recursive: true });
             const content = await fs.readFile(this.filePath, 'utf-8');
