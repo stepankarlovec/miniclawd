@@ -61,7 +61,24 @@ export class WebServer {
                 if (newConfig.gmail_client_secret === '***') delete newConfig.gmail_client_secret;
 
                 await this.configManager.update(newConfig);
-                res.json({ success: true, message: "Configuration saved. Please restart the agent for some changes to take effect." });
+
+                // Hot-reload Agent Profile
+                if (newConfig.agent_profile && newConfig.agent_profile !== this.agent.profile) {
+                    this.agent.profile = newConfig.agent_profile;
+                    this.agent.systemPrompt = this.agent._buildSystemPrompt();
+
+                    // Update tool visibility
+                    if (this.agent.profile === 'chat') {
+                        // Keep tools map but just don't use it in logic (already handled in run())
+                        // But systematically we might want to clear it if strict
+                    } else {
+                        // If switching back to work mode, we rely on the tools passed in constructor
+                        // Ideally checking if we need to re-init tools but they are stateless mostly
+                    }
+                    console.log(chalk.blue(`[System] Hot-swapped Agent Profile to: ${this.agent.profile}`));
+                }
+
+                res.json({ success: true, message: "Configuration saved." });
             } catch (error) {
                 res.status(500).json({ error: error.message });
             }
