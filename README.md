@@ -19,7 +19,7 @@ MiniClawd features **two distinct operating modes** optimized for different hard
 **Designed for**: Raspberry Pi, Edge Devices, Low-End Hardware
 
 **Optimizations**:
-- ✅ Minimal memory footprint (20 messages max)
+- ✅ Minimal memory footprint (20 messages, ~49KB max)
 - ✅ Current session only (no persistent history)
 - ✅ Optimized for tiny models (llama3.2:1b, qwen:0.5b)
 - ✅ Reduced context window
@@ -33,7 +33,7 @@ MiniClawd features **two distinct operating modes** optimized for different hard
 
 **Features**:
 - ✅ Full conversation history (100+ messages)
-- ✅ Extended context window (200KB+)
+- ✅ Extended context window (~195KB max)
 - ✅ Support for larger models (llama3:8b, mistral:7b)
 - ✅ Enhanced reasoning capabilities
 - ✅ Complex multi-step task execution
@@ -151,7 +151,7 @@ The configuration wizard (`npm run setup`) will help you configure:
 | Feature | LOW POWER | HIGH POWER |
 |---------|-----------|------------|
 | **Target Hardware** | Raspberry Pi, Edge | Desktop, Cloud |
-| **Memory Limit** | 20 messages (50KB) | 100 messages (200KB) |
+| **Memory Limit** | 20 messages (~49KB) | 100 messages (~195KB) |
 | **History** | Current session only | Full conversation |
 | **Recommended Models (Ollama)** | llama3.2:1b, qwen:0.5b | llama3:8b, mistral:7b |
 | **Recommended Models (OpenAI)** | gpt-4o-mini | gpt-4o |
@@ -257,8 +257,8 @@ npm run test:demo
 ```
 
 The test suite verifies:
-- ✅ LOW POWER mode configuration
-- ✅ HIGH POWER mode configuration
+- ✅ LOW POWER mode configuration (20 msgs, ~49KB)
+- ✅ HIGH POWER mode configuration (100 msgs, ~195KB)
 - ✅ Backward compatibility with legacy profiles
 - ✅ Memory limits for each mode
 - ✅ Agent reasoning loop execution

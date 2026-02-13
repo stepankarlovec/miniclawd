@@ -104,8 +104,8 @@ async function main() {
     if (passed === total) {
         console.log(chalk.green.bold(`✓ All ${total} demonstrations completed successfully!\n`));
         console.log(chalk.white('Key Differences:'));
-        console.log(chalk.gray('  • LOW POWER: Minimal memory (20 msgs, 50KB), concise prompts'));
-        console.log(chalk.gray('  • HIGH POWER: Full memory (100 msgs, 200KB), detailed prompts'));
+        console.log(chalk.gray('  • LOW POWER: Minimal memory (20 msgs, ~49KB), concise prompts'));
+        console.log(chalk.gray('  • HIGH POWER: Full memory (100 msgs, ~195KB), detailed prompts'));
         console.log(chalk.gray('  • Both modes support all tools and providers\n'));
     } else {
         console.log(chalk.red.bold(`✗ ${total - passed} of ${total} demonstrations failed\n`));

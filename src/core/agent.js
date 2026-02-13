@@ -6,6 +6,18 @@ import chalk from 'chalk';
 const JSON_REGEX = /\{[\s\S]*?\}/g;
 const THINK_REGEX = /<think>([\s\S]*?)<\/think>/;
 
+// Memory limits for different power modes (in bytes)
+const MEMORY_LIMITS = {
+    LOW_POWER: {
+        maxMessages: 20,
+        maxSize: 50000  // ~49KB - optimized for Raspberry Pi and edge devices
+    },
+    HIGH_POWER: {
+        maxMessages: 100,
+        maxSize: 200000 // ~195KB - full context for desktop/cloud deployments
+    }
+};
+
 export class Agent {
     constructor(llm, tools = [], options = {}) {
         this.llm = llm;
@@ -22,8 +34,8 @@ export class Agent {
 
         // Memory with limits based on power mode
         const memoryOptions = this.profile === 'LOW_POWER' 
-            ? { maxMessages: 20, maxSize: 50000 }  // LOW POWER: Minimal history for resource-constrained devices
-            : { maxMessages: 100, maxSize: 200000 }; // HIGH POWER: Full history with extended context
+            ? MEMORY_LIMITS.LOW_POWER  // Minimal history for resource-constrained devices
+            : MEMORY_LIMITS.HIGH_POWER; // Full history with extended context
         
         this.memory = new Memory(options.memoryPath, memoryOptions);
         this.systemPrompt = this._buildSystemPrompt();
@@ -138,8 +150,11 @@ export class Agent {
                         actions.push(parsed);
                     }
                 } catch (directParseError) {
-                    // If direct parsing fails, try to extract JSON objects using regex
-                    // Use a simple regex that matches complete JSON objects
+                    // Direct JSON parsing failed - this is expected when LLM returns
+                    // text mixed with JSON or multiple JSON objects
+                    // Fall back to regex-based extraction
+                    console.log(chalk.gray(`[Agent] Direct JSON parse failed, using regex fallback`));
+                    
                     const matches = responseText.matchAll(JSON_REGEX);
                     for (const match of matches) {
                         try {
@@ -148,7 +163,7 @@ export class Agent {
                                 actions.push(parsed);
                             }
                         } catch (e) {
-                            // Ignore invalid JSON chunks
+                            // Ignore invalid JSON chunks from regex matches
                         }
                     }
                 }

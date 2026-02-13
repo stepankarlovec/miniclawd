@@ -59,9 +59,9 @@ Rules:
     // No tools, no history, just direct conversation
     chat: {
         system: () => ``
-    },
-    
-    // Legacy aliases for backward compatibility
-    high: null, // Will map to HIGH_POWER
-    low: null   // Will map to LOW_POWER
+    }
 };
+
+// Legacy aliases for backward compatibility - point to actual prompts
+PROMPTS.high = PROMPTS.HIGH_POWER;
+PROMPTS.low = PROMPTS.LOW_POWER;
