@@ -9,102 +9,144 @@ import { WeatherTool, CoinGeckoTool, RandomFactTool } from './tools/api.js';
 import { GmailManager, GmailAuthTool, GmailSendTool, GmailReadTool } from './tools/gmail.js';
 import { webTools } from './tools/web.js';
 import { TelegramBot } from './server/telegram.js';
+import { WebServer } from './server/server.js';
+import readline from 'readline';
+import chalk from 'chalk';
+import ora from 'ora';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-// ... (imports remain same)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.join(__dirname, '../data');
 
-// ... (config manager init remains same)
-
-// ... (main function start)
-
-// Initialize Tools
-const tools = [
-    new ListDirTool(),
-    new ReadFileTool(),
-    new WriteFileTool(),
-    new RunCommandTool(),
-    new ScriptExecutionTool(),
-    new WeatherTool(),
-    new CoinGeckoTool(),
-    new RandomFactTool(),
-    new GmailAuthTool(gmailManager),
-    new GmailSendTool(gmailManager),
-    new GmailReadTool(gmailManager),
-    ...webTools // Add Web Tools (Search + Read)
-];
-
-// Initialize Agent
-let agent;
-try {
-    agent = new Agent(llm, tools, {
-        memoryPath: path.join(DATA_DIR, 'memory.json'),
-        profile: config.agent_profile || 'high'
-    });
-} catch (e) {
-    console.error(chalk.red("Agent Init Error:"), e);
-    process.exit(1);
+// Ensure data dir exists
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-
-
-// --- CLEANER RE-IMPLEMENTATION OF DEPENDENCY INJECTION ---
-
-// 1. Core Services (Agent, Config, Gmail, LLM) - ALREADY DONE ABOVE
-
-// 2. Telegram (Initialized but not launched if we need IO)
-// actually TelegramBot needs IO to emit events.
-// WebServer needs TelegramBot to check status.
-// Solution: Create WebServer first (gets IO). Then create TelegramBot (uses IO). Then inject TelegramBot into WebServer (for Health).
-
-let webServer = null;
-let io = null;
-let telegramBot = null;
-if (config.enable_web) {
-    webServer = new WebServer(agent, configManager, null, gmailManager, llm); // null telegram for now
-    webServer.start(config.web_port);
-    io = webServer.io;
-}
-
-if (config.telegram_token) {
-    telegramBot = new TelegramBot(config.telegram_token, agent, configManager, io);
-    telegramBot.launch();
-}
-
-if (webServer) {
-    // Inject telegram bot back into health check
-    webServer.healthCheck.telegramBot = telegramBot;
-}
-
-// CLI Loop
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
+const configManager = new StorageManager(path.join(DATA_DIR, 'config.json'), {
+    llm_provider: 'ollama',
+    model_name: 'llama3.2:1b',
+    agent_profile: 'high', // 'low' or 'high'
+    approved_telegram_ids: [],
+    enable_web: true,
+    web_port: 3000
 });
 
-const askQuestion = (query) => new Promise(resolve => rl.question(query, resolve));
+async function main() {
+    await configManager.init();
+    const config = configManager.get();
 
-console.log(chalk.cyan(`Agent ready. Type "exit" to quit.`));
+    console.log(chalk.green.bold('MiniClawd Agent Framework'));
 
-while (true) {
-    const userInput = await askQuestion(chalk.green('\nYou: '));
-
-    if (userInput.toLowerCase() === 'exit') {
-        break;
-    }
-
-    const spinner = ora('Agent is thinking...').start();
-
+    // Initialize LLM
+    let llm;
     try {
-        const answer = await agent.run(userInput);
-        spinner.stop();
-        console.log(chalk.magenta('\nAgent:'), answer);
-    } catch (error) {
-        spinner.stop();
-        console.error(chalk.red('Error occurred:'), error);
+        if (config.llm_provider === 'openai') {
+            if (!config.openai_api_key) console.warn(chalk.yellow("Warning: OpenAI API Key missing in config."));
+            llm = new OpenAIProvider(config.openai_api_key, config.model_name);
+        } else {
+            llm = new OllamaProvider(config.model_name);
+        }
+    } catch (e) {
+        console.error(chalk.red("LLM Provider Init Error:"), e);
     }
-}
 
-rl.close();
-process.exit(0);
+    // Initialize Gmail Manager
+    const gmailManager = new GmailManager(configManager);
+    await gmailManager.init();
+
+    // Initialize Tools
+    const tools = [
+        new ListDirTool(),
+        new ReadFileTool(),
+        new WriteFileTool(),
+        new RunCommandTool(),
+        new ScriptExecutionTool(),
+        new WeatherTool(),
+        new CoinGeckoTool(),
+        new RandomFactTool(),
+        new GmailAuthTool(gmailManager),
+        new GmailSendTool(gmailManager),
+        new GmailReadTool(gmailManager),
+        ...webTools // Add Web Tools (Search + Read)
+    ];
+
+    // Initialize Agent
+    let agent;
+    try {
+        agent = new Agent(llm, tools, {
+            memoryPath: path.join(DATA_DIR, 'memory.json'),
+            profile: config.agent_profile || 'high'
+        });
+    } catch (e) {
+        console.error(chalk.red("Agent Init Error:"), e);
+        process.exit(1);
+    }
+
+
+
+    // --- CLEANER RE-IMPLEMENTATION OF DEPENDENCY INJECTION ---
+
+    // 1. Core Services (Agent, Config, Gmail, LLM) - ALREADY DONE ABOVE
+
+    // 2. Telegram (Initialized but not launched if we need IO)
+    // actually TelegramBot needs IO to emit events.
+    // WebServer needs TelegramBot to check status.
+    // Solution: Create WebServer first (gets IO). Then create TelegramBot (uses IO). Then inject TelegramBot into WebServer (for Health).
+
+    let webServer = null;
+    let io = null;
+    let telegramBot = null;
+    if (config.enable_web) {
+        webServer = new WebServer(agent, configManager, null, gmailManager, llm); // null telegram for now
+        webServer.start(config.web_port);
+        io = webServer.io;
+    }
+
+    if (config.telegram_token) {
+        telegramBot = new TelegramBot(config.telegram_token, agent, configManager, io);
+        telegramBot.launch();
+    }
+
+    if (webServer) {
+        // Inject telegram bot back into health check
+        webServer.healthCheck.telegramBot = telegramBot;
+    }
+
+    // CLI Loop
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    const askQuestion = (query) => new Promise(resolve => rl.question(query, resolve));
+
+    console.log(chalk.cyan(`Agent ready. Type "exit" to quit.`));
+
+    while (true) {
+        const userInput = await askQuestion(chalk.green('\nYou: '));
+
+        if (userInput.toLowerCase() === 'exit') {
+            break;
+        }
+
+        const spinner = ora('Agent is thinking...').start();
+
+        try {
+            const answer = await agent.run(userInput);
+            spinner.stop();
+            console.log(chalk.magenta('\nAgent:'), answer);
+        } catch (error) {
+            spinner.stop();
+            console.error(chalk.red('Error occurred:'), error);
+        }
+    }
+
+    rl.close();
+    process.exit(0);
 }
 
 main();
