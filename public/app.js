@@ -131,6 +131,31 @@ configForm.onsubmit = async (e) => {
     }
 }
 
+// Restart Ollama Handler
+const btnRestartOllama = document.getElementById('btn-restart-ollama');
+if (btnRestartOllama) {
+    btnRestartOllama.addEventListener('click', async () => {
+        if (!confirm("Are you sure you want to restart the Ollama service? This will terminate any running generations.")) return;
+
+        try {
+            addLog("Sending restart command to Ollama...", 'warning');
+            const res = await fetch('/api/system/restart-ollama', { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                alert("Restart command sent. Please wait a few seconds for Ollama to come back online.");
+                addLog("Ollama restart command sent successfully.", 'success');
+            } else {
+                alert("Error: " + data.error);
+                addLog("Failed to restart Ollama: " + data.error, 'error');
+            }
+        } catch (e) {
+            alert("Request failed: " + e.message);
+            addLog("Request failed: " + e.message, 'error');
+        }
+    });
+}
+
 
 
 // --- Chat Logic ---
@@ -335,6 +360,11 @@ async function sendMessage() {
         addMessageToUI('assistant', 'Error: ' + err.message);
     }
 }
+
+sendBtn.addEventListener('click', sendMessage);
+userInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
 
 window.approveUser = async (chatId) => {
     await fetch('/api/auth/approve', {
