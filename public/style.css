@@ -183,69 +183,52 @@ background-color: var(--error-color);
     flex-direction: column;
     background: var(--bg-color);
     position: relative;
+    overflow: hidden;
+    /* Prevent body scroll */
+    min-height: 0;
 }
 
-/* Header */
-header {
-    height: 72px;
-    padding: 0 32px;
+/* ... header ... */
+
+/* Main Content Views */
+.view-section {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    /* Critical for nested flex scroll */
+    height: 100%;
+}
+
+.view-section.active {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.header-title h2 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.header-title p {
-    margin: 4px 0 0 0;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-.settings-btn {
-    background: var(--glass);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.settings-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    /* Slightly lighter */
-    color: var(--text-primary);
 }
 
 /* Chat Area */
 .chat-container {
     flex: 1;
+    /* Take all available space in view-section */
     display: flex;
     flex-direction: column;
     padding: 0 32px 32px 32px;
-    /* Bottom padding for input */
     max-width: 900px;
     margin: 0 auto;
     width: 100%;
+    overflow: hidden;
+    /* Constrain children */
+    min-height: 0;
 }
 
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 32px 0;
+    /* Scroll THIS element */
+    padding: 24px 0;
     display: flex;
     flex-direction: column;
     gap: 24px;
+    min-height: 0;
 }
 
 /* Scrollbar Polish */
