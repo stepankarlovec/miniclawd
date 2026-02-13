@@ -95,6 +95,7 @@ async function main() {
 
     let webServer = null;
     let io = null;
+    let telegramBot = null;
     if (config.enable_web) {
         webServer = new WebServer(agent, configManager, null, gmailManager, llm); // null telegram for now
         webServer.start(config.web_port);
