@@ -132,37 +132,54 @@ async function main() {
         webServer.healthCheck.telegramBot = telegramBot;
     }
 
-    // CLI Loop
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
+    // Only start CLI if running in interactive mode (TTY)
+    if (process.stdin.isTTY) {
+        // CLI Loop
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
 
-    const askQuestion = (query) => new Promise(resolve => rl.question(query, resolve));
+        const askQuestion = (query) => new Promise(resolve => rl.question(query, resolve));
 
-    console.log(chalk.cyan(`Agent ready. Type "exit" to quit.`));
+        console.log(chalk.cyan(`Agent ready. Type "exit" to quit.`));
 
-    while (true) {
-        const userInput = await askQuestion(chalk.green('\nYou: '));
+        while (true) {
+            const userInput = await askQuestion(chalk.green('\nYou: '));
 
-        if (userInput.toLowerCase() === 'exit') {
-            break;
+            if (userInput.toLowerCase() === 'exit') {
+                break;
+            }
+
+            const spinner = ora('Agent is thinking...').start();
+
+            try {
+                const answer = await agent.run(userInput);
+                spinner.stop();
+                console.log(chalk.magenta('\nAgent:'), answer);
+            } catch (error) {
+                spinner.stop();
+                console.error(chalk.red('Error occurred:'), error);
+            }
         }
 
-        const spinner = ora('Agent is thinking...').start();
-
-        try {
-            const answer = await agent.run(userInput);
-            spinner.stop();
-            console.log(chalk.magenta('\nAgent:'), answer);
-        } catch (error) {
-            spinner.stop();
-            console.error(chalk.red('Error occurred:'), error);
-        }
+        rl.close();
+        process.exit(0);
+    } else {
+        // Running in background mode (e.g., as a service)
+        console.log(chalk.cyan('Running in server mode (no CLI). Press Ctrl+C to exit.'));
+        
+        // Keep the process running
+        process.on('SIGINT', () => {
+            console.log(chalk.yellow('\nShutting down...'));
+            process.exit(0);
+        });
+        
+        process.on('SIGTERM', () => {
+            console.log(chalk.yellow('\nShutting down...'));
+            process.exit(0);
+        });
     }
-
-    rl.close();
-    process.exit(0);
 }
 
 main();

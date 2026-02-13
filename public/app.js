@@ -1,4 +1,4 @@
-const socket = io();
+const socket = typeof io !== 'undefined' ? io() : null;
 const chatWindow = document.getElementById('chat-window');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
@@ -273,8 +273,9 @@ let statusMsgId = null;
 // For now, let's just create a button in the UI or check a config
 // We'll expose a window function to toggle it via console or new UI button if added
 
-socket.on('agent-activity', (data) => {
-    const chatWindow = document.getElementById('chat-window');
+if (socket) {
+    socket.on('agent-activity', (data) => {
+        const chatWindow = document.getElementById('chat-window');
 
     // Remove existing status if exists
     if (statusMsgId) {
@@ -331,6 +332,7 @@ socket.on('agent-activity', (data) => {
     chatWindow.appendChild(div);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 });
+}
 
 // Helper to switch mode programmatically
 async function switchMode(profile) {
