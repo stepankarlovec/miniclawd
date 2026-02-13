@@ -1,4 +1,5 @@
-import { BaseTool } from './base.js';
+import { Tool } from './base.js';
+import { z } from 'zod';
 
 // Simple performance tracking utility
 class PerformanceTracker {
@@ -63,20 +64,14 @@ class PerformanceTracker {
 // Global tracker instance
 export const perfTracker = new PerformanceTracker();
 
-export class PerformanceMetricsTool extends BaseTool {
+export class PerformanceMetricsTool extends Tool {
     constructor() {
         super(
             'get_performance_metrics',
             'Get performance metrics for LLM and tool calls',
-            {
-                type: 'object',
-                properties: {
-                    reset: {
-                        type: 'boolean',
-                        description: 'Reset metrics after retrieving'
-                    }
-                }
-            }
+            z.object({
+                reset: z.boolean().optional().describe('Reset metrics after retrieving')
+            })
         );
     }
 

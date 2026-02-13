@@ -1,21 +1,16 @@
 import si from 'systeminformation';
-import { BaseTool } from './base.js';
+import { Tool } from './base.js';
+import { z } from 'zod';
 import fs from 'fs/promises';
 
-export class SystemInfoTool extends BaseTool {
+export class SystemInfoTool extends Tool {
     constructor() {
         super(
             'system_info',
             'Get current system information including CPU, memory, temperature, and disk usage',
-            {
-                type: 'object',
-                properties: {
-                    detailed: {
-                        type: 'boolean',
-                        description: 'Get detailed system information'
-                    }
-                }
-            }
+            z.object({
+                detailed: z.boolean().optional().describe('Get detailed system information')
+            })
         );
     }
 
@@ -76,12 +71,12 @@ export class SystemInfoTool extends BaseTool {
     }
 }
 
-export class ThrottleDetectionTool extends BaseTool {
+export class ThrottleDetectionTool extends Tool {
     constructor() {
         super(
             'check_cpu_throttling',
             'Check if CPU is being throttled due to temperature on Raspberry Pi',
-            { type: 'object', properties: {} }
+            z.object({})
         );
     }
 
@@ -128,12 +123,12 @@ export class ThrottleDetectionTool extends BaseTool {
     }
 }
 
-export class MemoryStatsTool extends BaseTool {
+export class MemoryStatsTool extends Tool {
     constructor(agent) {
         super(
             'get_memory_stats',
             'Get agent memory usage statistics',
-            { type: 'object', properties: {} }
+            z.object({})
         );
         this.agent = agent;
     }
@@ -158,12 +153,12 @@ export class MemoryStatsTool extends BaseTool {
     }
 }
 
-export class ClearMemoryTool extends BaseTool {
+export class ClearMemoryTool extends Tool {
     constructor(agent) {
         super(
             'clear_memory',
             'Clear agent conversation memory to free up resources',
-            { type: 'object', properties: {} }
+            z.object({})
         );
         this.agent = agent;
     }
