@@ -54,6 +54,8 @@ export class Agent {
 
         // Add user message to memory
         await this.memory.init();
+        // Track where this run started to enforce "0 History" for low profile
+        const runStartIndex = this.memory.getMessages().length;
         this.memory.addMessage('user', userInput);
 
         let turns = 0;
@@ -65,8 +67,8 @@ export class Agent {
             // History Management based on Profile
             let history;
             if (this.profile === 'low') {
-                // Low End: ONLY last 2 messages for context. Ignore older history.
-                history = this.memory.getMessages().slice(-4);
+                // Low End: Zero previous history. Only current run's context.
+                history = this.memory.getMessages().slice(runStartIndex);
             } else {
                 // High End: Full history
                 history = this.memory.getMessages();
