@@ -8,7 +8,7 @@ export class OllamaProvider {
      */
     constructor(modelName = 'llama3.2:1b', options = {}) {
         this.modelName = modelName;
-        this.timeout = options.timeout || 60000; // Increased to 60s timeout for slower devices
+        this.timeout = options.timeout || 60000; // Increased from 30s to 60s timeout for slower devices
         this.enableStreaming = options.enableStreaming || false;
         this.verbose = options.verbose !== false; // Enable verbose logging by default
     }
