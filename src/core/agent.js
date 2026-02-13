@@ -128,19 +128,28 @@ export class Agent {
             const responseText = await this.llm.chat(messages);
             console.log(chalk.cyan(`[LLM] Raw Output:\n${responseText}`));
 
-            // Parse Response - Support Multiple Actions (optimized single-pass)
+            // Parse Response - Support Multiple Actions
             let actions = [];
             try {
-                // Use pre-compiled regex for better performance
-                const matches = responseText.matchAll(JSON_REGEX);
-                for (const match of matches) {
-                    try {
-                        const parsed = JSON.parse(match[0]);
-                        if (parsed.tool || parsed.answer) {
-                            actions.push(parsed);
+                // First, try to parse the entire response as JSON
+                try {
+                    const parsed = JSON.parse(responseText);
+                    if (parsed.tool || parsed.answer) {
+                        actions.push(parsed);
+                    }
+                } catch (directParseError) {
+                    // If direct parsing fails, try to extract JSON objects using regex
+                    // Use a simple regex that matches complete JSON objects
+                    const matches = responseText.matchAll(JSON_REGEX);
+                    for (const match of matches) {
+                        try {
+                            const parsed = JSON.parse(match[0]);
+                            if (parsed.tool || parsed.answer) {
+                                actions.push(parsed);
+                            }
+                        } catch (e) {
+                            // Ignore invalid JSON chunks
                         }
-                    } catch (e) {
-                        // Ignore invalid JSON chunks
                     }
                 }
 
@@ -180,7 +189,7 @@ export class Agent {
 
                     if (tool) {
                         try {
-                            const result = await tool.func(toolArgs);
+                            const result = await tool.execute(toolArgs);
                             toolResult = typeof result === 'string' ? result : JSON.stringify(result);
                         } catch (err) {
                             toolResult = `Error executing tool ${toolName}: ${err.message}`;
