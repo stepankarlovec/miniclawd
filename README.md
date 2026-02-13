@@ -300,17 +300,40 @@ Agent: (uses clear_memory tool)
 ```
 
 ### Ollama Connection Issues
+
+**⚠️ IMPORTANT**: If you're getting "Cannot connect to Ollama" or "Not getting any response":
+
+**Quick Check**:
 ```bash
-# Verify Ollama is running
+# 1. Check if Ollama is running
 curl http://127.0.0.1:11434
 
-# Install/start Ollama
+# 2. Check installed models
+ollama list
+
+# 3. Run diagnostic test
+npm run test:ollama
+```
+
+**Quick Fix**:
+```bash
+# Install Ollama (if not installed)
 curl https://ollama.ai/install.sh | sh
+
+# Start Ollama service
 ollama serve
 
-# Pull recommended model for Raspberry Pi
-ollama pull qwen2.5:0.5b
+# Pull a recommended model
+ollama pull llama3.2:1b    # For Raspberry Pi 3/4
+ollama pull qwen:0.5b      # For Raspberry Pi Zero/1/2
 ```
+
+**📚 Full Troubleshooting Guide**: See [Ollama Troubleshooting Guide](docs/OLLAMA_TROUBLESHOOTING.md) for:
+- Complete diagnostics checklist
+- Common error messages and solutions
+- Performance optimization
+- Memory and timeout issues
+- Model selection guide
 
 **New in v1.2**: Comprehensive Ollama logging and diagnostics
 - Verbose logging shows timing metrics, TTFB, and bottlenecks
