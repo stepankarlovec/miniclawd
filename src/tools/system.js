@@ -110,12 +110,25 @@ export class ThrottleDetectionTool extends Tool {
                         'Consider improving cooling or power supply' : 'System running normally'
                 }, null, 2);
             } catch (e) {
-                // Not a Raspberry Pi or file not accessible
+                // Distinguish between different error types
                 const temp = await si.cpuTemperature();
-                return JSON.stringify({
-                    message: 'Not a Raspberry Pi or throttling info not available',
-                    currentTemp: temp.main ? temp.main.toFixed(1) + '°C' : 'N/A'
-                }, null, 2);
+                
+                if (e.code === 'ENOENT') {
+                    return JSON.stringify({
+                        message: 'Not a Raspberry Pi (throttling file not found)',
+                        currentTemp: temp.main ? temp.main.toFixed(1) + '°C' : 'N/A'
+                    }, null, 2);
+                } else if (e.code === 'EACCES') {
+                    return JSON.stringify({
+                        message: 'Permission denied accessing throttling info (try running with sudo)',
+                        currentTemp: temp.main ? temp.main.toFixed(1) + '°C' : 'N/A'
+                    }, null, 2);
+                } else {
+                    return JSON.stringify({
+                        message: `Error reading throttling info: ${e.message}`,
+                        currentTemp: temp.main ? temp.main.toFixed(1) + '°C' : 'N/A'
+                    }, null, 2);
+                }
             }
         } catch (error) {
             return `Error checking throttling: ${error.message}`;

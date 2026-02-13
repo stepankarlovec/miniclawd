@@ -50,8 +50,21 @@ export class Memory {
         const currentSize = JSON.stringify(this.messages).length;
         if (currentSize > this.maxSize) {
             // Remove oldest messages until under size limit
-            while (this.messages.length > 10 && JSON.stringify(this.messages).length > this.maxSize) {
-                this.messages.shift();
+            // Keep at least 10 messages to preserve recent context
+            const MIN_MESSAGES = 10;
+            
+            // Calculate approximate size per message to avoid repeated JSON.stringify
+            const avgMessageSize = currentSize / this.messages.length;
+            const messagesToRemove = Math.ceil((currentSize - this.maxSize) / avgMessageSize);
+            
+            if (this.messages.length - messagesToRemove >= MIN_MESSAGES) {
+                // Remove calculated number of messages
+                this.messages = this.messages.slice(messagesToRemove);
+            } else {
+                // Fallback: remove one at a time if we're close to minimum
+                while (this.messages.length > MIN_MESSAGES && JSON.stringify(this.messages).length > this.maxSize) {
+                    this.messages.shift();
+                }
             }
         }
     }
