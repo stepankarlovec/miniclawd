@@ -129,8 +129,10 @@ export class WebServer {
 
     start(port = 3000) {
         try {
-            this.server.listen(port, () => {
-                console.log(chalk.green.bold(`\nWeb Dashboard running on http://localhost:${port}`));
+            this.server.listen(port, '0.0.0.0', () => {
+                const address = this.server.address();
+                console.log(chalk.green.bold(`\nWeb Dashboard running on http://${address.address}:${address.port}`));
+                console.log(chalk.cyan(`Access via LAN: http://<YOUR_PI_IP>:${address.port}`));
             });
             this.server.on('error', (e) => {
                 console.error(chalk.red("Web Server Error:"), e);

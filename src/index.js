@@ -94,6 +94,7 @@ async function main() {
     // Solution: Create WebServer first (gets IO). Then create TelegramBot (uses IO). Then inject TelegramBot into WebServer (for Health).
 
     let webServer = null;
+    let io = null;
     if (config.enable_web) {
         webServer = new WebServer(agent, configManager, null, gmailManager, llm); // null telegram for now
         webServer.start(config.web_port);
