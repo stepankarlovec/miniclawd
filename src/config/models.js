@@ -6,6 +6,12 @@
 
 export const AVAILABLE_MODELS = {
     ollama: [
+<<<<<<< copilot/verify-ollama-functionality
+        { value: 'llama3.2:1b', label: 'Llama 3.2 (1B) - Fast & Efficient', description: 'Best for Raspberry Pi 3/4' },
+        { value: 'qwen2.5:0.5b', label: 'Qwen 2.5 (0.5B) - Ultra Light', description: 'Best for Raspberry Pi Zero/1/2' },
+        { value: 'qwen2.5:1.5b', label: 'Qwen 2.5 (1.5B) - Balanced', description: 'Good balance for Raspberry Pi 3/4' },
+        { value: 'qwen2.5:3b', label: 'Qwen 2.5 (3B) - More Capable', description: 'Better quality, needs Pi 4+ with 4GB RAM' }
+=======
         // Ultra-lightweight models for LOW POWER mode on Raspberry Pi Zero/1/2
         { value: 'qwen:0.5b', label: 'Qwen (0.5B) - Ultra Light', description: 'Best for Raspberry Pi Zero/1/2 (LOW POWER)' },
         { value: 'qwen3:0.6b', label: 'Qwen 3 (0.6B) - Ultra Light', description: 'Best for Raspberry Pi Zero/1/2 (LOW POWER)' },
@@ -18,6 +24,7 @@ export const AVAILABLE_MODELS = {
         { value: 'llama3.2:3b', label: 'Llama 3.2 (3B) - Enhanced', description: 'Desktop/Server (HIGH POWER)' },
         { value: 'llama3:8b', label: 'Llama 3 (8B) - Powerful', description: 'Desktop/Server with GPU (HIGH POWER)' },
         { value: 'mistral:7b', label: 'Mistral (7B) - Advanced', description: 'Desktop/Server with GPU (HIGH POWER)' }
+>>>>>>> main
     ],
     openai: [
         { value: 'gpt-4o-mini', label: 'GPT-4o Mini - Cheapest & Fast', description: '$0.15/1M input tokens (both modes)' },

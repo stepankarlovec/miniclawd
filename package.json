@@ -7,8 +7,14 @@
   "scripts": {
     "start": "node src/index.js",
     "setup": "node src/scripts/setup.js",
+<<<<<<< copilot/verify-ollama-functionality
+    "test": "node test/test_thinking_extraction.js && node test/test_ollama_logging.js",
+    "test:thinking": "node test/test_thinking_extraction.js",
+    "test:ollama": "node test/test_ollama_logging.js"
+=======
     "test": "node test/test_power_modes.js && node test/verify_agent.js",
     "test:demo": "node test/demo_power_modes.js"
+>>>>>>> main
   },
   "keywords": [],
   "author": "",
