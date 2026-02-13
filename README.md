@@ -129,7 +129,7 @@ Configure via setup wizard, then chat with your agent on Telegram!
 ```json
 {
   "llm_provider": "ollama",
-  "model_name": "gwen3:0.6b",
+  "model_name": "qwen2.5:0.5b",
   "agent_profile": "low",
   "enable_streaming": true
 }
@@ -140,7 +140,7 @@ Consider using an even smaller model or cloud API:
 ```json
 {
   "llm_provider": "ollama",
-  "model_name": "qwen:0.5b",
+  "model_name": "qwen2.5:0.5b",
   "agent_profile": "low"
 }
 ```

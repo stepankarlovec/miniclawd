@@ -30,7 +30,7 @@ if (!fs.existsSync(DATA_DIR)) {
 
 const configManager = new StorageManager(path.join(DATA_DIR, 'config.json'), {
     llm_provider: 'ollama',
-    model_name: 'gwen3:0.6b',
+    model_name: 'qwen2.5:0.5b',
     agent_profile: 'high', // 'low' or 'high'
     approved_telegram_ids: [],
     enable_web: true,
@@ -51,8 +51,9 @@ async function main() {
             llm = new OpenAIProvider(config.openai_api_key, config.model_name);
         } else {
             llm = new OllamaProvider(config.model_name, { 
-                timeout: 30000,
-                enableStreaming: config.enable_streaming || false 
+                timeout: 60000,  // 60s timeout for slower devices
+                enableStreaming: config.enable_streaming || false,
+                verbose: true  // Enable verbose logging
             });
         }
     } catch (e) {

@@ -6,7 +6,9 @@
 export const AVAILABLE_MODELS = {
     ollama: [
         { value: 'llama3.2:1b', label: 'Llama 3.2 (1B) - Fast & Efficient', description: 'Best for Raspberry Pi 3/4' },
-        { value: 'qwen3:0.6b', label: 'Qwen 3 (0.6B) - Ultra Light', description: 'Best for Raspberry Pi Zero/1/2' }
+        { value: 'qwen2.5:0.5b', label: 'Qwen 2.5 (0.5B) - Ultra Light', description: 'Best for Raspberry Pi Zero/1/2' },
+        { value: 'qwen2.5:1.5b', label: 'Qwen 2.5 (1.5B) - Balanced', description: 'Good balance for Raspberry Pi 3/4' },
+        { value: 'qwen2.5:3b', label: 'Qwen 2.5 (3B) - More Capable', description: 'Better quality, needs Pi 4+ with 4GB RAM' }
     ],
     openai: [
         { value: 'gpt-4o-mini', label: 'GPT-4o Mini - Cheapest & Fast', description: '$0.15/1M input tokens' },

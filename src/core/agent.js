@@ -108,11 +108,22 @@ export class Agent {
             const responseText = await this.llm.chat(messages);
             console.log(chalk.cyan(`[LLM] Raw Output:\n${responseText}`));
 
+            // Extract thinking process if present (use pre-compiled regex)
+            let cleanedResponse = responseText;
+            const thinkMatch = responseText.match(THINK_REGEX);
+            if (thinkMatch) {
+                const thoughtContent = thinkMatch[1].trim();
+                cleanedResponse = responseText.replace(THINK_REGEX, '').trim();
+
+                if (onUpdate) onUpdate({ type: 'thought', message: thoughtContent });
+                console.log(chalk.magenta(`[Thought] ${thoughtContent.substring(0, 100)}...`));
+            }
+
             // Parse Response - Support Multiple Actions (optimized single-pass)
             let actions = [];
             try {
                 // Use pre-compiled regex for better performance
-                const matches = responseText.matchAll(JSON_REGEX);
+                const matches = cleanedResponse.matchAll(JSON_REGEX);
                 for (const match of matches) {
                     try {
                         const parsed = JSON.parse(match[0]);
@@ -126,11 +137,11 @@ export class Agent {
 
                 // Fallback if no valid JSON found but text exists
                 if (actions.length === 0) {
-                    actions.push({ answer: responseText });
+                    actions.push({ answer: cleanedResponse });
                 }
             } catch (e) {
                 console.error(chalk.red("JSON Parse Error:"), e.message);
-                actions.push({ answer: responseText });
+                actions.push({ answer: cleanedResponse });
             }
 
             // Execute Actions
