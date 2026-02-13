@@ -108,7 +108,9 @@ export class WebServer {
                 // Give response time to reach client
                 setTimeout(() => {
                     console.log(chalk.red('[System] Restarting application...'));
-                    process.exit(0); // Exit cleanly, systemd or pm2 will restart
+                    // Note: Requires a process manager (systemd, pm2, etc.) to automatically restart
+                    // If running manually, you'll need to restart the process yourself
+                    process.exit(0); // Exit cleanly, process manager will restart
                 }, 500);
             } catch (error) {
                 res.status(500).json({ error: error.message });

@@ -172,12 +172,12 @@ configForm.onsubmit = async (e) => {
                 await fetch('/api/system/restart', { method: 'POST' });
                 
                 // Show restart message
-                alert("Application is restarting... Please wait 5-10 seconds and refresh the page.");
+                alert("Application is restarting... Please wait 10 seconds and the page will reload automatically.");
                 
                 // Wait a bit then reload page
                 setTimeout(() => {
                     window.location.reload();
-                }, 8000);
+                }, 10000); // Wait 10 seconds to allow server to restart
             }
         } else {
             alert("Configuration saved successfully!");
