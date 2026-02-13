@@ -1,0 +1,30 @@
+{
+  "name": "miniclawd",
+  "version": "1.0.0",
+  "description": "MiniClawd Agent Framework",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "setup": "node src/scripts/setup.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "chalk": "^5.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "googleapis": "^171.4.0",
+    "inquirer": "^9.2.14",
+    "ollama": "^0.5.0",
+    "ora": "^8.0.1",
+    "socket.io": "^4.7.4",
+    "systeminformation": "^5.30.7",
+    "telegraf": "^4.16.3",
+    "zod": "^3.22.4"
+  }
+}
