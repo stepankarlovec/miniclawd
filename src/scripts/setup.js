@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
+import { AVAILABLE_MODELS, DEFAULT_MODELS } from '../config/models.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,10 +29,20 @@ async function setup() {
             default: existingConfig.llm_provider === 'openai' ? 'OpenAI (API)' : 'Ollama (Local)'
         },
         {
-            type: 'input',
+            type: 'list',
             name: 'modelName',
-            message: 'Enter the model name to use:',
-            default: (answers) => existingConfig.model_name || (answers.provider === 'Ollama (Local)' ? 'llama3.2:1b' : 'gpt-3.5-turbo')
+            message: 'Select the model to use:',
+            choices: (answers) => {
+                const provider = answers.provider === 'Ollama (Local)' ? 'ollama' : 'openai';
+                return AVAILABLE_MODELS[provider].map(m => ({
+                    name: `${m.label} - ${m.description}`,
+                    value: m.value
+                }));
+            },
+            default: (answers) => {
+                const provider = answers.provider === 'Ollama (Local)' ? 'ollama' : 'openai';
+                return existingConfig.model_name || DEFAULT_MODELS[provider];
+            }
         },
         {
             type: 'input',
