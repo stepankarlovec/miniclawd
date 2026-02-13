@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node src/index.js",
     "setup": "node src/scripts/setup.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/test_thinking_extraction.js && node test/test_ollama_logging.js",
+    "test:thinking": "node test/test_thinking_extraction.js",
+    "test:ollama": "node test/test_ollama_logging.js"
   },
   "keywords": [],
   "author": "",

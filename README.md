@@ -203,9 +203,45 @@ curl http://127.0.0.1:11434
 # Install/start Ollama
 curl https://ollama.ai/install.sh | sh
 ollama serve
+
+# Pull recommended model for Raspberry Pi
+ollama pull qwen2.5:0.5b
 ```
 
+**New in v1.2**: Comprehensive Ollama logging and diagnostics
+- Verbose logging shows timing metrics, TTFB, and bottlenecks
+- Automatic connectivity checks on errors
+- Thinking process extraction and display
+- See [Ollama Improvements Guide](docs/OLLAMA_IMPROVEMENTS.md) for details
+
+### Ollama Slow Performance
+
+**Symptoms**: Long delays or timeouts
+
+**Quick Fixes**:
+1. Check the console logs for `[Ollama]` timing information
+2. Use a smaller model (qwen2.5:0.5b instead of larger variants)
+3. Increase timeout in config: `"timeout": 90000`
+4. Enable streaming: `"enable_streaming": true`
+5. Check CPU throttling with `check_cpu_throttling` tool
+
+**Detailed Diagnostics**: See [Ollama Improvements Guide](docs/OLLAMA_IMPROVEMENTS.md)
+
 ## 🎓 Advanced Topics
+
+### Thinking Process Display
+
+MiniClawd now supports displaying the thinking process from models that use `<think>` tags (like Qwen models).
+
+**In Web UI**:
+- Thinking appears in collapsible sections with 🧠 emoji
+- Toggle thinking display with `/thoughts` command
+- Thoughts are separated from the final answer
+
+**In CLI**:
+- Thoughts are logged with `[Thought]` prefix
+- Shown in magenta color
+- Can be disabled by setting `verbose: false` in provider options
 
 ### Custom Tools
 Create new tools by extending `BaseTool`:
@@ -235,7 +271,18 @@ const memoryOptions = {
 
 ## 📈 Changelog
 
-### v1.1.0 (Current)
+### v1.2.0 (Current)
+- ✅ **Thinking Process Display** - Extract and show model reasoning in `<think>` tags
+- ✅ **Comprehensive Ollama Logging** - Detailed timing metrics and diagnostics
+- ✅ **Performance Bottleneck Detection** - TTFB tracking, duration logging
+- ✅ **Automatic Ollama Health Checks** - Connectivity verification on errors
+- ✅ **Model Name Corrections** - Fixed typo: gwen3 → qwen2.5
+- ✅ **Extended Timeouts** - Increased to 60s for slower devices
+- ✅ **Enhanced Error Messages** - Actionable diagnostics with timing info
+- ✅ **Test Suite** - Automated tests for thinking extraction and Ollama
+- ✅ **Documentation** - Comprehensive Ollama improvements guide
+
+### v1.1.0
 - ✅ Memory auto-pruning with circular buffer
 - ✅ Hardware metrics caching (5s TTL)
 - ✅ Pre-compiled regex patterns
