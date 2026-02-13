@@ -245,6 +245,33 @@ socket.on('agent-activity', (data) => {
     chatWindow.scrollTop = chatWindow.scrollHeight;
 });
 
+// Helper to switch mode programmatically
+async function switchMode(profile) {
+    try {
+        const config = await fetch('/api/config').then(res => res.json());
+        config.agent_profile = profile;
+
+        await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+
+        // Update UI Header to reflect mode
+        const header = document.querySelector('header');
+        // Simple visual feedback based on mode
+        if (profile === 'chat') {
+            header.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)'; // Green for Fast
+        } else {
+            header.style.background = ''; // Reset to CSS default (Work mode)
+        }
+
+    } catch (e) {
+        console.error("Failed to switch mode", e);
+        addLog("Failed to switch mode: " + e.message, 'error');
+    }
+}
+
 // Slash command to toggle thoughts
 async function sendMessage() {
     const text = userInput.value.trim();

@@ -652,3 +652,39 @@ input:focus {
         padding: 16px;
     }
 }
+
+/* Thought Bubbles */
+.bubble.thought {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed var(--border-color);
+    width: 100%;
+}
+
+.thought-content {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-top: 10px;
+    white-space: pre-wrap;
+    padding-left: 10px;
+    border-left: 2px solid var(--accent-color);
+}
+
+details>summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--accent-color);
+    list-style: none;
+    /* Remove default triangle in some browsers */
+}
+
+details>summary::before {
+    content: '▶ ';
+    font-size: 0.8em;
+    display: inline-block;
+    transition: transform 0.2s;
+}
+
+details[open]>summary::before {
+    transform: rotate(90deg);
+}

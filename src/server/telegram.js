@@ -8,11 +8,12 @@ export class TelegramBot {
         this.configManager = configManager;
         this.io = io; // Socket.io instance for emitting events
 
+        this.startTime = Math.floor(Date.now() / 1000);
         this._setupHandlers();
     }
 
     launch() {
-        this.bot.launch().then(() => {
+        this.bot.launch({ dropPendingUpdates: true }).then(() => {
             console.log(chalk.blue('Telegram Bot launched!'));
         }).catch(err => {
             console.error(chalk.red('Telegram Bot failed to launch:', err));
@@ -27,6 +28,12 @@ export class TelegramBot {
         this.bot.on('message', async (ctx) => {
             // Basic text messages only for now
             if (!ctx.message.text) return;
+
+            // Ignore old messages (older than boot time)
+            if (ctx.message.date < this.startTime) {
+                console.log(chalk.gray(`[Telegram] Ignoring old message from ${ctx.message.date} (Boot: ${this.startTime})`));
+                return;
+            }
 
             const chatId = ctx.chat.id.toString();
             const username = ctx.from.username || ctx.from.first_name || 'Unknown';

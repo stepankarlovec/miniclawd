@@ -41,10 +41,22 @@ export class Agent {
             ];
 
             try {
-                const response = await this.llm.chat(messages);
-                // No memory saving in fast mode to save IO ops
-                if (onUpdate) onUpdate({ type: 'answer', message: response });
-                return response;
+                const rawResponse = await this.llm.chat(messages);
+
+                // Extract thinking even in chat mode
+                let finalResponse = rawResponse;
+                const thinkMatch = rawResponse.match(/<think>([\s\S]*?)<\/think>/);
+
+                if (thinkMatch) {
+                    const thoughtContent = thinkMatch[1].trim();
+                    finalResponse = rawResponse.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+
+                    if (onUpdate) onUpdate({ type: 'thought', message: thoughtContent });
+                    console.log(chalk.magenta(`[Thought] ${thoughtContent.substring(0, 50)}...`));
+                }
+
+                if (onUpdate) onUpdate({ type: 'answer', message: finalResponse });
+                return finalResponse;
             } catch (e) {
                 return "Error: " + e.message;
             }
