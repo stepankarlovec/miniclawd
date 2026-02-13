@@ -30,8 +30,13 @@ if (!fs.existsSync(DATA_DIR)) {
 
 const configManager = new StorageManager(path.join(DATA_DIR, 'config.json'), {
     llm_provider: 'ollama',
+<<<<<<< copilot/verify-ollama-functionality
     model_name: 'qwen2.5:0.5b',
     agent_profile: 'high', // 'low' or 'high'
+=======
+    model_name: 'llama3.2:1b',
+    power_mode: 'LOW_POWER', // LOW_POWER (Raspberry Pi/Edge) or HIGH_POWER (Desktop/Cloud)
+>>>>>>> main
     approved_telegram_ids: [],
     enable_web: true,
     web_port: 3000
@@ -67,9 +72,12 @@ async function main() {
     // Initialize Agent first (without memory-dependent tools)
     let agent;
     try {
+        // Support both new power_mode and legacy agent_profile for backward compatibility
+        const powerMode = config.power_mode || config.agent_profile || 'HIGH_POWER';
+        
         agent = new Agent(llm, [], {
             memoryPath: path.join(DATA_DIR, 'memory.json'),
-            profile: config.agent_profile || 'high'
+            powerMode: powerMode
         });
     } catch (e) {
         console.error(chalk.red("Agent Init Error:"), e);

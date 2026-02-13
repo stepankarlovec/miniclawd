@@ -30,6 +30,26 @@ async function setup() {
         },
         {
             type: 'list',
+            name: 'powerMode',
+            message: 'Select Power Mode:',
+            choices: [
+                {
+                    name: 'LOW POWER - Optimized for Raspberry Pi/Edge devices (minimal memory, current session only)',
+                    value: 'LOW_POWER'
+                },
+                {
+                    name: 'HIGH POWER - Full-featured agent (complete history, all capabilities)',
+                    value: 'HIGH_POWER'
+                },
+                {
+                    name: 'CHAT - Fast Q&A without tools (zero overhead)',
+                    value: 'chat'
+                }
+            ],
+            default: existingConfig.power_mode || existingConfig.agent_profile || 'LOW_POWER'
+        },
+        {
+            type: 'list',
             name: 'modelName',
             message: 'Select the model to use:',
             choices: (answers) => {
@@ -96,6 +116,7 @@ async function setup() {
         ...existingConfig,
         llm_provider: answers.provider.startsWith('Ollama') ? 'ollama' : 'openai',
         model_name: answers.modelName,
+        power_mode: answers.powerMode, // New power mode setting
         openai_api_key: answers.openaiKey || existingConfig.openai_api_key || '',
         telegram_token: answers.telegramToken || existingConfig.telegram_token || '',
         enable_web: answers.enableWeb,
