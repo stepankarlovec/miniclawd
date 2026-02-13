@@ -132,6 +132,41 @@ async function setup() {
         await fs.mkdir(DATA_DIR, { recursive: true });
         await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
         console.log(chalk.green(`\nConfiguration saved to ${CONFIG_FILE}`));
+        
+        // Check Ollama if selected
+        if (config.llm_provider === 'ollama') {
+            console.log(chalk.cyan('\n🔍 Checking Ollama setup...'));
+            try {
+                const response = await fetch('http://127.0.0.1:11434/api/tags');
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(chalk.green('✓ Ollama is running'));
+                    
+                    if (data.models && data.models.length > 0) {
+                        const modelNames = data.models.map(m => m.name);
+                        console.log(chalk.gray(`  Available models: ${modelNames.join(', ')}`));
+                        
+                        if (modelNames.includes(config.model_name)) {
+                            console.log(chalk.green(`✓ Model '${config.model_name}' is installed`));
+                        } else {
+                            console.log(chalk.yellow(`⚠ Model '${config.model_name}' is NOT installed`));
+                            console.log(chalk.yellow(`  Run: ollama pull ${config.model_name}`));
+                        }
+                    } else {
+                        console.log(chalk.yellow('⚠ No models installed in Ollama'));
+                        console.log(chalk.yellow(`  Run: ollama pull ${config.model_name}`));
+                    }
+                }
+            } catch (error) {
+                console.log(chalk.red('✗ Cannot connect to Ollama at http://127.0.0.1:11434'));
+                console.log(chalk.yellow('\nTo use Ollama, you need to:'));
+                console.log(chalk.yellow('1. Install Ollama: curl https://ollama.ai/install.sh | sh'));
+                console.log(chalk.yellow('2. Start Ollama: ollama serve'));
+                console.log(chalk.yellow(`3. Pull a model: ollama pull ${config.model_name}`));
+                console.log(chalk.gray('\nOr switch to OpenAI by running setup again.'));
+            }
+        }
+        
         console.log(chalk.blue(`\nSetup Complete! Run 'npm start' to launch MiniClawd.`));
     } catch (error) {
         console.error(chalk.red('Error saving config:'), error);

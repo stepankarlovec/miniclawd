@@ -196,13 +196,8 @@ Configure via setup wizard, then chat with your agent on Telegram!
 ```json
 {
   "llm_provider": "ollama",
-<<<<<<< copilot/verify-ollama-functionality
-  "model_name": "qwen2.5:0.5b",
-  "agent_profile": "low",
-=======
   "model_name": "llama3.2:1b",
   "power_mode": "LOW_POWER",
->>>>>>> main
   "enable_streaming": true
 }
 ```
@@ -211,10 +206,6 @@ Configure via setup wizard, then chat with your agent on Telegram!
 ```json
 {
   "llm_provider": "ollama",
-<<<<<<< copilot/verify-ollama-functionality
-  "model_name": "qwen2.5:0.5b",
-  "agent_profile": "low"
-=======
   "model_name": "qwen:0.5b",
   "power_mode": "LOW_POWER"
 }
@@ -237,7 +228,6 @@ Configure via setup wizard, then chat with your agent on Telegram!
   "model_name": "gpt-4o-mini",
   "power_mode": "LOW_POWER",
   "openai_api_key": "sk-..."
->>>>>>> main
 }
 ```
 
@@ -310,17 +300,40 @@ Agent: (uses clear_memory tool)
 ```
 
 ### Ollama Connection Issues
+
+**⚠️ IMPORTANT**: If you're getting "Cannot connect to Ollama" or "Not getting any response":
+
+**Quick Check**:
 ```bash
-# Verify Ollama is running
+# 1. Check if Ollama is running
 curl http://127.0.0.1:11434
 
-# Install/start Ollama
+# 2. Check installed models
+ollama list
+
+# 3. Run diagnostic test
+npm run test:ollama
+```
+
+**Quick Fix**:
+```bash
+# Install Ollama (if not installed)
 curl https://ollama.ai/install.sh | sh
+
+# Start Ollama service
 ollama serve
 
-# Pull recommended model for Raspberry Pi
-ollama pull qwen2.5:0.5b
+# Pull a recommended model
+ollama pull llama3.2:1b    # For Raspberry Pi 3/4
+ollama pull qwen:0.5b      # For Raspberry Pi Zero/1/2
 ```
+
+**📚 Full Troubleshooting Guide**: See [Ollama Troubleshooting Guide](docs/OLLAMA_TROUBLESHOOTING.md) for:
+- Complete diagnostics checklist
+- Common error messages and solutions
+- Performance optimization
+- Memory and timeout issues
+- Model selection guide
 
 **New in v1.2**: Comprehensive Ollama logging and diagnostics
 - Verbose logging shows timing metrics, TTFB, and bottlenecks
@@ -385,29 +398,20 @@ const memoryOptions = {
 
 ## 📈 Changelog
 
-<<<<<<< copilot/verify-ollama-functionality
-### v1.2.0 (Current)
+### v1.2.0 (Current - Power Modes & Ollama Improvements)
+- ✅ **LOW POWER Mode**: Optimized for Raspberry Pi/Edge devices (minimal memory, concise prompts)
+- ✅ **HIGH POWER Mode**: Full-featured agent for desktop/cloud (extended history, detailed reasoning)
 - ✅ **Thinking Process Display** - Extract and show model reasoning in `<think>` tags
 - ✅ **Comprehensive Ollama Logging** - Detailed timing metrics and diagnostics
 - ✅ **Performance Bottleneck Detection** - TTFB tracking, duration logging
 - ✅ **Automatic Ollama Health Checks** - Connectivity verification on errors
-- ✅ **Model Name Corrections** - Fixed typo: gwen3 → qwen2.5
 - ✅ **Extended Timeouts** - Increased to 60s for slower devices
-- ✅ **Enhanced Error Messages** - Actionable diagnostics with timing info
-- ✅ **Test Suite** - Automated tests for thinking extraction and Ollama
-- ✅ **Documentation** - Comprehensive Ollama improvements guide
-=======
-### v1.2.0 (Current - Power Modes Update)
-- ✅ **LOW POWER Mode**: Optimized for Raspberry Pi/Edge devices (minimal memory, concise prompts)
-- ✅ **HIGH POWER Mode**: Full-featured agent for desktop/cloud (extended history, detailed reasoning)
 - ✅ Power mode normalization with backward compatibility
-- ✅ Enhanced model selection (support for llama3.2:1b, qwen:0.5b, and larger models)
-- ✅ Updated setup wizard with clear power mode options
+- ✅ Enhanced model selection (support for llama3.2:1b, qwen:0.5b, qwen2.5 models, and larger models)
 - ✅ Fixed JSON parsing bug for nested objects
 - ✅ Fixed tool execution bug (execute method)
-- ✅ Comprehensive test suite
-- ✅ Updated documentation with power mode explanations
->>>>>>> main
+- ✅ Comprehensive test suite (power modes, thinking extraction, Ollama)
+- ✅ Updated documentation with power mode and Ollama improvement guides
 
 ### v1.1.0
 - ✅ Memory auto-pruning with circular buffer
