@@ -1,8 +1,10 @@
 import { StorageManager } from './storage.js';
 
 export class Memory {
-    constructor(storagePath) {
+    constructor(storagePath, options = {}) {
         this.messages = [];
+        this.maxMessages = options.maxMessages || 100; // Limit total messages
+        this.maxSize = options.maxSize || 100000; // 100KB limit
         if (storagePath) {
             this.storage = new StorageManager(storagePath, { messages: [] });
         }
@@ -12,11 +14,14 @@ export class Memory {
         if (this.storage) {
             await this.storage.init();
             this.messages = this.storage.get('messages') || [];
+            // Auto-prune on init if needed
+            await this._autoPrune();
         }
     }
 
     async addMessage(role, content) {
         this.messages.push({ role, content });
+        await this._autoPrune();
         if (this.storage) {
             await this.storage.set('messages', this.messages);
         }
@@ -31,5 +36,46 @@ export class Memory {
         if (this.storage) {
             await this.storage.set('messages', []);
         }
+    }
+
+    // Auto-prune memory when it exceeds limits
+    async _autoPrune() {
+        // Check message count limit
+        if (this.messages.length > this.maxMessages) {
+            // Keep only the most recent messages
+            this.messages = this.messages.slice(-this.maxMessages);
+        }
+
+        // Check size limit
+        const currentSize = JSON.stringify(this.messages).length;
+        if (currentSize > this.maxSize) {
+            // Remove oldest messages until under size limit
+            // Keep at least 10 messages to preserve recent context
+            const MIN_MESSAGES = 10;
+            
+            // Calculate approximate size per message to avoid repeated JSON.stringify
+            const avgMessageSize = currentSize / this.messages.length;
+            const messagesToRemove = Math.ceil((currentSize - this.maxSize) / avgMessageSize);
+            
+            if (this.messages.length - messagesToRemove >= MIN_MESSAGES) {
+                // Remove calculated number of messages
+                this.messages = this.messages.slice(messagesToRemove);
+            } else {
+                // Fallback: remove one at a time if we're close to minimum
+                while (this.messages.length > MIN_MESSAGES && JSON.stringify(this.messages).length > this.maxSize) {
+                    this.messages.shift();
+                }
+            }
+        }
+    }
+
+    // Get memory usage stats
+    getStats() {
+        return {
+            messageCount: this.messages.length,
+            sizeBytes: JSON.stringify(this.messages).length,
+            maxMessages: this.maxMessages,
+            maxSize: this.maxSize
+        };
     }
 }
