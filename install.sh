@@ -28,6 +28,50 @@ fi
 echo -e "\n${BLUE}Installing dependencies...${NC}"
 npm install
 
+# 2.5. Optional Ollama Installation
+echo -e "\n${BLUE}Checking for Ollama...${NC}"
+if ! command -v ollama &> /dev/null; then
+    echo -e "${YELLOW}Ollama is not installed.${NC}"
+    read -p "Do you want to install Ollama (local AI models)? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo -e "${BLUE}Installing Ollama...${NC}"
+        curl -fsSL https://ollama.ai/install.sh | sh
+        
+        echo -e "${GREEN}Ollama installed successfully!${NC}"
+        echo -e "${BLUE}Starting Ollama service...${NC}"
+        
+        # Start Ollama in the background
+        nohup ollama serve > /tmp/ollama.log 2>&1 &
+        sleep 3
+        
+        echo -e "${BLUE}Pulling recommended model (llama3.2:1b)...${NC}"
+        echo -e "${YELLOW}This may take a few minutes depending on your internet speed.${NC}"
+        ollama pull llama3.2:1b
+        
+        echo -e "${GREEN}Ollama setup complete!${NC}"
+    else
+        echo -e "${YELLOW}Skipping Ollama installation.${NC}"
+        echo -e "${YELLOW}You can use OpenAI instead during configuration.${NC}"
+    fi
+else
+    echo -e "${GREEN}Ollama is already installed.${NC}"
+    
+    # Check if Ollama is running
+    if curl -s http://127.0.0.1:11434 > /dev/null 2>&1; then
+        echo -e "${GREEN}Ollama is running.${NC}"
+    else
+        echo -e "${YELLOW}Ollama is not running.${NC}"
+        read -p "Start Ollama now? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            nohup ollama serve > /tmp/ollama.log 2>&1 &
+            sleep 3
+            echo -e "${GREEN}Ollama started.${NC}"
+        fi
+    fi
+fi
+
 # 3. Interactive Setup
 echo -e "\n${BLUE}Running configuration wizard...${NC}"
 npm run setup
