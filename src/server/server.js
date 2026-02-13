@@ -168,60 +168,58 @@ export class WebServer {
                 res.status(500).json({ error: "Internal Server Error: " + error.message });
             }
         });
-        res.status(500).json({ error: "Internal Server Error: " + error.message });
+
+
+        // API: System Restart Ollama
+        this.app.post('/api/system/restart-ollama', async (req, res) => {
+            const { exec } = await import('child_process');
+            const platform = process.platform;
+            let command = '';
+
+            console.log(chalk.yellow(`[System] Received request to restart Ollama (Platform: ${platform})`));
+
+            if (platform === 'linux') {
+                command = 'sudo systemctl restart ollama';
+            } else if (platform === 'win32') {
+                // Windows: Kill process, it might need manual start or if registered as service
+                // Attempting to just kill might be safer than spawning a persistent server from this node process
+                command = 'taskkill /F /IM "ollama_app.exe" /T';
+                // Note: User might need to restart Ollama manually if it doesn't auto-recover,
+                // but usually "restart" implies stopping and starting.
+                // Improving: 'taskkill /F /IM "ollama_app.exe" & date /t' - just kill for now.
+            } else {
+                return res.status(400).json({ error: `Unsupported platform: ${platform}` });
+            }
+
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`[System] Restart Error: ${error.message}`);
+                    return res.status(500).json({ error: error.message, stderr });
+                }
+                console.log(`[System] Restart Output: ${stdout}`);
+                res.json({ success: true, message: "Ollama restart command executed." });
+            });
+        });
     }
-});
 
-// API: System Restart Ollama
-this.app.post('/api/system/restart-ollama', async (req, res) => {
-    const { exec } = await import('child_process');
-    const platform = process.platform;
-    let command = '';
-
-    console.log(chalk.yellow(`[System] Received request to restart Ollama (Platform: ${platform})`));
-
-    if (platform === 'linux') {
-        command = 'sudo systemctl restart ollama';
-    } else if (platform === 'win32') {
-        // Windows: Kill process, it might need manual start or if registered as service
-        // Attempting to just kill might be safer than spawning a persistent server from this node process
-        command = 'taskkill /F /IM "ollama_app.exe" /T';
-        // Note: User might need to restart Ollama manually if it doesn't auto-recover,
-        // but usually "restart" implies stopping and starting.
-        // Improving: 'taskkill /F /IM "ollama_app.exe" & date /t' - just kill for now.
-    } else {
-        return res.status(400).json({ error: `Unsupported platform: ${platform}` });
+    setupSocket() {
+        this.io.on('connection', (socket) => {
+            // console.log(chalk.gray('[Socket] Client connected'));
+        });
     }
 
-    exec(command, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`[System] Restart Error: ${error.message}`);
-            return res.status(500).json({ error: error.message, stderr });
+    start(port = 3000) {
+        try {
+            this.server.listen(port, '0.0.0.0', () => {
+                const address = this.server.address();
+                console.log(chalk.green.bold(`\nWeb Dashboard running on http://${address.address}:${address.port}`));
+                console.log(chalk.cyan(`Access via LAN: http://<YOUR_PI_IP>:${address.port}`));
+            });
+            this.server.on('error', (e) => {
+                console.error(chalk.red("Web Server Error:"), e);
+            });
+        } catch (e) {
+            console.error(chalk.red("Failed to start Web Server:"), e);
         }
-        console.log(`[System] Restart Output: ${stdout}`);
-        res.json({ success: true, message: "Ollama restart command executed." });
-    });
-});
     }
-
-setupSocket() {
-    this.io.on('connection', (socket) => {
-        // console.log(chalk.gray('[Socket] Client connected'));
-    });
-}
-
-start(port = 3000) {
-    try {
-        this.server.listen(port, '0.0.0.0', () => {
-            const address = this.server.address();
-            console.log(chalk.green.bold(`\nWeb Dashboard running on http://${address.address}:${address.port}`));
-            console.log(chalk.cyan(`Access via LAN: http://<YOUR_PI_IP>:${address.port}`));
-        });
-        this.server.on('error', (e) => {
-            console.error(chalk.red("Web Server Error:"), e);
-        });
-    } catch (e) {
-        console.error(chalk.red("Failed to start Web Server:"), e);
-    }
-}
 }
