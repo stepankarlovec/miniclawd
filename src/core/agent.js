@@ -1,53 +1,32 @@
 import { Memory } from './memory.js';
+import { PROMPTS } from './prompts.js';
 import chalk from 'chalk';
 
 export class Agent {
     constructor(llm, tools = [], options = {}) {
         this.llm = llm;
-        this.tools = new Map(tools.map(tool => [tool.name, tool]));
+        this.profile = options.profile || 'high'; // 'high', 'low', 'chat'
+
+        // If chat mode, we disable tools completely to prevent hallucinations
+        if (this.profile === 'chat') {
+            this.tools = new Map();
+        } else {
+            this.tools = new Map(tools.map(tool => [tool.name, tool]));
+        }
+
         this.memory = new Memory(options.memoryPath);
         this.systemPrompt = this._buildSystemPrompt();
     }
 
     _buildSystemPrompt() {
-        const toolDescriptions = Array.from(this.tools.values())
-            .map(tool => `- ${tool.name}: ${tool.description} (Args: ${JSON.stringify(tool.schema.shape)})`) // simplified schema rep
-            .join('\n');
+        const toolsJson = JSON.stringify(Array.from(this.tools.values()).map(t => ({
+            name: t.name,
+            description: t.description,
+            schema: t.schema
+        })), null, 2);
 
-        return `You are a helpful AI assistant. You have access to the following tools:
-
-${toolDescriptions}
-
-You must respond in strictly VALID JSON format. Do not add any markdown formatting or explanations outside the JSON.
-Depending on what you want to do, your JSON response should be one of the following two schemas:
-
-1. To use a tool:
-{
-  "tool": "tool_name",
-  "args": { ... }
-}
-
-2. To provide a final answer to the user:
-{
-  "answer": "your final response here"
-}
-
-IMPORTANT:
-- RESPONSE MUST BE ONLY JSON.
-- DO NOT PREPEND "Here is the JSON" OR MARKDOWN BACKTICKS.
-- IF YOU ARE UNSURE, USE THE "answer" SCHEMA TO ASK FOR CLARIFICATION.
-
-Example 1 (Using a tool):
-{
-  "tool": "read_file",
-  "args": { "path": "./README.md" }
-}
-
-Example 2 (Final answer):
-{
-  "answer": "The file contains instructions on how to set up the project."
-}
-`;
+        const promptFn = PROMPTS[this.profile]?.system || PROMPTS['high'].system;
+        return promptFn(toolsJson);
     }
 
     async run(userInput) {

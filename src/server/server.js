@@ -90,8 +90,25 @@ export class WebServer {
                     console.log(chalk.green(`[Auth] Approved Telegram ID: ${chatId}`));
 
                     this.io.emit('bot-access-granted', { chatId });
+                    this.io.emit('system-log', { type: 'success', message: `Approved access for Telegram ID: ${chatId}` });
                 }
                 res.json({ success: true, approvedIds: currentIds });
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
+
+        // API: Reject Telegram ID
+        this.app.post('/api/auth/reject', async (req, res) => {
+            try {
+                const { chatId } = req.body;
+                if (!chatId) return res.status(400).json({ error: "No chatId provided" });
+
+                console.log(chalk.yellow(`[Auth] Rejected Telegram ID: ${chatId}`));
+                this.io.emit('bot-access-rejected', { chatId });
+                this.io.emit('system-log', { type: 'warning', message: `Refused access for Telegram ID: ${chatId}` });
+
+                res.json({ success: true });
             } catch (error) {
                 res.status(500).json({ error: error.message });
             }

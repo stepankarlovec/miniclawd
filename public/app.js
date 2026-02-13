@@ -4,9 +4,6 @@ const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const approvalList = document.getElementById('approval-list');
 const connectionStatus = document.getElementById('connection-status');
-const modal = document.getElementById('settings-modal');
-const settingsBtn = document.getElementById('settings-btn');
-const closeBtn = document.getElementsByClassName('close')[0];
 const configForm = document.getElementById('config-form');
 
 // Elements for Hardware Monitor
@@ -61,23 +58,60 @@ function updateStatusItem(id, isGood) {
 setInterval(updateStatus, 3000); // Poll every 3 seconds for HW stats
 updateStatus();
 
-// --- Settings Modal ---
-settingsBtn.onclick = async () => {
-    modal.style.display = "block";
-    const res = await fetch('/api/config');
-    const config = await res.json();
+// --- View Switching ---
+const viewButtons = document.querySelectorAll('.nav-btn');
+const views = document.querySelectorAll('.view-section');
+const pageTitle = document.getElementById('page-title');
 
-    document.getElementById('cfg-provider').value = config.llm_provider || 'ollama';
-    document.getElementById('cfg-model').value = config.model_name || '';
-    document.getElementById('cfg-openai').value = config.openai_api_key || '';
-    document.getElementById('cfg-telegram').value = config.telegram_token || '';
-    document.getElementById('cfg-gmail-id').value = config.gmail_client_id || '';
-    document.getElementById('cfg-gmail-secret').value = config.gmail_client_secret || '';
+viewButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const viewName = btn.dataset.view;
+        switchView(viewName);
+
+        // Mobile: close sidebar on selection
+        if (window.innerWidth <= 768) {
+            sidebar.classList.remove('active');
+        }
+    });
+});
+
+async function switchView(viewName) {
+    // Update Nav
+    viewButtons.forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.nav-btn[data-view="${viewName}"]`).classList.add('active');
+
+    // Update View
+    views.forEach(v => v.classList.remove('active'));
+    document.getElementById(`view-${viewName}`).classList.add('active');
+
+    // View specific logic
+    if (viewName === 'chat') {
+        pageTitle.textContent = "Chat Workspace";
+    } else if (viewName === 'logs') {
+        pageTitle.textContent = "System Logs";
+        document.getElementById('system-logs').scrollTop = document.getElementById('system-logs').scrollHeight;
+    } else if (viewName === 'settings') {
+        pageTitle.textContent = "Configuration";
+        await loadConfig();
+    }
 }
 
-closeBtn.onclick = () => modal.style.display = "none";
-window.onclick = (event) => {
-    if (event.target == modal) modal.style.display = "none";
+// --- Settings Logic ---
+async function loadConfig() {
+    try {
+        const res = await fetch('/api/config');
+        const config = await res.json();
+
+        document.getElementById('cfg-profile').value = config.agent_profile || 'high';
+        document.getElementById('cfg-provider').value = config.llm_provider || 'ollama';
+        document.getElementById('cfg-model').value = config.model_name || '';
+        document.getElementById('cfg-openai').value = config.openai_api_key || '';
+        document.getElementById('cfg-telegram').value = config.telegram_token || '';
+        document.getElementById('cfg-gmail-id').value = config.gmail_client_id || '';
+        document.getElementById('cfg-gmail-secret').value = config.gmail_client_secret || '';
+    } catch (e) {
+        console.error("Failed to load config", e);
+    }
 }
 
 configForm.onsubmit = async (e) => {
@@ -91,12 +125,12 @@ configForm.onsubmit = async (e) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        alert("Configuration saved!");
-        modal.style.display = "none";
+        alert("Configuration saved! Please restart the agent if you changed critical settings.");
     } catch (e) {
         alert("Error saving config: " + e.message);
     }
 }
+
 
 
 // --- Chat Logic ---
@@ -178,7 +212,10 @@ socket.on('bot-request', (data) => {
     li.classList.add('approval-item');
     li.innerHTML = `
         <span><strong>${data.username || 'User'}</strong> (${data.chatId})</span>
-        <button class="approval-btn" onclick="approveUser('${data.chatId}')">Approve</button>
+        <div>
+            <button class="approval-btn" onclick="approveUser('${data.chatId}')">Approve</button>
+            <button class="approval-btn deny" onclick="denyUser('${data.chatId}')">Deny</button>
+        </div>
     `;
     approvalList.appendChild(li);
     document.getElementById('no-pending').style.display = 'none';
@@ -187,10 +224,24 @@ socket.on('bot-request', (data) => {
 socket.on('bot-access-granted', (data) => {
     const li = document.getElementById(`req-${data.chatId}`);
     if (li) li.remove();
+    checkPending();
+});
+
+socket.on('bot-access-rejected', (data) => {
+    const li = document.getElementById(`req-${data.chatId}`);
+    if (li) li.remove();
+    checkPending();
+});
+
+socket.on('system-log', (data) => {
+    addLog(data.message, data.type);
+});
+
+function checkPending() {
     if (approvalList.children.length === 0) {
         document.getElementById('no-pending').style.display = 'block';
     }
-});
+}
 
 window.approveUser = async (chatId) => {
     await fetch('/api/auth/approve', {
@@ -200,4 +251,43 @@ window.approveUser = async (chatId) => {
     });
 };
 
-loadHistory();
+window.denyUser = async (chatId) => {
+    await fetch('/api/auth/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId })
+    });
+};
+
+function addLog(message, type = 'info') {
+    const container = document.getElementById('system-logs');
+    const div = document.createElement('div');
+    div.classList.add('log-entry', type);
+
+    const time = new Date().toLocaleTimeString();
+    div.textContent = `[${time}] ${message}`;
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+
+// Mobile Menu Toggle
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const sidebar = document.getElementById('sidebar');
+
+if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+    });
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768) {
+            if (!sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target) && sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+            }
+        }
+    });
+}
+

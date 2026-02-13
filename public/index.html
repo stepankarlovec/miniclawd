@@ -16,12 +16,31 @@
 
 <body>
 
+    <!-- Mobile Menu Button -->
+
+
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="brand">
             <div class="brand-icon">🍓</div>
             <span>MiniClawd</span>
         </div>
+
+        <!-- Navigation -->
+        <nav class="nav-section">
+            <h3>Menu</h3>
+            <div class="nav-list">
+                <button class="nav-btn active" data-view="chat">
+                    <span>💬</span> Chat
+                </button>
+                <button class="nav-btn" data-view="logs">
+                    <span>📜</span> System Logs
+                </button>
+                <button class="nav-btn" data-view="settings">
+                    <span>⚙️</span> Settings
+                </button>
+            </div>
+        </nav>
 
         <nav class="nav-section">
             <h3>System Status</h3>
@@ -87,79 +106,91 @@
     <main class="main-content">
         <header>
             <div class="header-title">
-                <h2>Agent Workspace</h2>
+                <h2 id="page-title">Chat Workspace</h2>
                 <p id="connection-status">Connected to Local Network</p>
             </div>
-            <button id="settings-btn" class="settings-btn" title="Settings">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path
-                        d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z">
-                    </path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-            </button>
         </header>
 
-        <div class="chat-container">
-            <div id="chat-window" class="chat-messages">
-                <!-- Messages go here -->
-                <div class="message assistant">
-                    <div class="avatar">⚡</div>
-                    <div class="bubble">Hello! I'm MiniClawd. How can I help you today?</div>
+        <!-- View: Chat -->
+        <div id="view-chat" class="view-section active">
+            <div class="chat-container">
+                <div id="chat-window" class="chat-messages">
+                    <!-- Messages go here -->
+                    <div class="message assistant">
+                        <div class="avatar">⚡</div>
+                        <div class="bubble">Hello! I'm MiniClawd. How can I help you today?</div>
+                    </div>
+                </div>
+
+                <div class="input-wrapper">
+                    <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off">
+                    <button id="send-btn" class="send-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
                 </div>
             </div>
+        </div>
 
-            <div class="input-wrapper">
-                <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off">
-                <button id="send-btn" class="send-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                </button>
+        <!-- View: Logs -->
+        <div id="view-logs" class="view-section">
+            <div class="content-wrapper">
+                <div class="logs-container full-page" id="system-logs">
+                    <div class="log-entry info">System started...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Settings -->
+        <div id="view-settings" class="view-section">
+            <div class="content-wrapper">
+                <div class="settings-card">
+                    <form id="config-form">
+                        <div class="form-group">
+                            <label>Agent Profile</label>
+                            <select id="cfg-profile" name="agent_profile">
+                                <option value="high">High End (Smart, Tools)</option>
+                                <option value="low">Low End (Fast, Tools)</option>
+                                <option value="chat">Chat (No Tools, Fast)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>LLM Provider</label>
+                            <select id="cfg-provider" name="llm_provider">
+                                <option value="ollama">Ollama (Local)</option>
+                                <option value="openai">OpenAI (Cloud)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Model Name</label>
+                            <input type="text" id="cfg-model" name="model_name" placeholder="e.g. llama3.2:1b">
+                        </div>
+                        <div class="form-group">
+                            <label>OpenAI API Key (Optional)</label>
+                            <input type="password" id="cfg-openai" name="openai_api_key" placeholder="sk-...">
+                        </div>
+                        <div class="form-group">
+                            <label>Telegram Bot Token (Optional)</label>
+                            <input type="password" id="cfg-telegram" name="telegram_token"
+                                placeholder="123456:ABC-DEF...">
+                        </div>
+                        <div class="form-group">
+                            <label>Gmail Client ID (Optional)</label>
+                            <input type="text" id="cfg-gmail-id" name="gmail_client_id">
+                        </div>
+                        <div class="form-group">
+                            <label>Gmail Client Secret (Optional)</label>
+                            <input type="password" id="cfg-gmail-secret" name="gmail_client_secret">
+                        </div>
+                        <button type="submit" class="save-btn">Save Changes</button>
+                    </form>
+                </div>
             </div>
         </div>
     </main>
-
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2 style="margin-top: 0; margin-bottom: 24px;">Configuration</h2>
-            <form id="config-form">
-                <div class="form-group">
-                    <label>LLM Provider</label>
-                    <select id="cfg-provider" name="llm_provider">
-                        <option value="ollama">Ollama (Local)</option>
-                        <option value="openai">OpenAI (Cloud)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Model Name</label>
-                    <input type="text" id="cfg-model" name="model_name" placeholder="e.g. llama3.2:1b">
-                </div>
-                <div class="form-group">
-                    <label>OpenAI API Key (Optional)</label>
-                    <input type="password" id="cfg-openai" name="openai_api_key" placeholder="sk-...">
-                </div>
-                <div class="form-group">
-                    <label>Telegram Bot Token (Optional)</label>
-                    <input type="password" id="cfg-telegram" name="telegram_token" placeholder="123456:ABC-DEF...">
-                </div>
-                <div class="form-group">
-                    <label>Gmail Client ID (Optional)</label>
-                    <input type="text" id="cfg-gmail-id" name="gmail_client_id">
-                </div>
-                <div class="form-group">
-                    <label>Gmail Client Secret (Optional)</label>
-                    <input type="password" id="cfg-gmail-secret" name="gmail_client_secret">
-                </div>
-                <button type="submit" class="save-btn">Save Changes</button>
-            </form>
-        </div>
-    </div>
 
     <script src="app.js"></script>
 </body>
