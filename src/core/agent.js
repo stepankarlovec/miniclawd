@@ -9,7 +9,8 @@ const THINK_REGEX = /<think>([\s\S]*?)<\/think>/;
 export class Agent {
     constructor(llm, tools = [], options = {}) {
         this.llm = llm;
-        this.profile = options.profile || 'high'; // 'high', 'low', 'chat'
+        // Support both old terminology (for backwards compatibility) and new power mode names
+        this.profile = this._normalizePowerMode(options.profile || options.powerMode || 'HIGH_POWER');
         this.timeout = options.timeout || 30000; // Default 30s timeout
 
         // If chat mode, we disable tools completely to prevent hallucinations
@@ -19,13 +20,26 @@ export class Agent {
             this.tools = new Map(tools.map(tool => [tool.name, tool]));
         }
 
-        // Memory with limits based on profile
-        const memoryOptions = this.profile === 'low' 
-            ? { maxMessages: 20, maxSize: 50000 }  // Lower limits for low profile
-            : { maxMessages: 100, maxSize: 100000 }; // Default limits
+        // Memory with limits based on power mode
+        const memoryOptions = this.profile === 'LOW_POWER' 
+            ? { maxMessages: 20, maxSize: 50000 }  // LOW POWER: Minimal history for resource-constrained devices
+            : { maxMessages: 100, maxSize: 200000 }; // HIGH POWER: Full history with extended context
         
         this.memory = new Memory(options.memoryPath, memoryOptions);
         this.systemPrompt = this._buildSystemPrompt();
+    }
+
+    _normalizePowerMode(mode) {
+        // Normalize to uppercase and handle legacy names
+        const normalized = String(mode).toUpperCase();
+        
+        // Map legacy names to new power modes
+        if (normalized === 'LOW' || normalized === 'LOW_POWER') return 'LOW_POWER';
+        if (normalized === 'HIGH' || normalized === 'HIGH_POWER') return 'HIGH_POWER';
+        if (normalized === 'CHAT') return 'chat';
+        
+        // Default to HIGH_POWER for unknown modes
+        return 'HIGH_POWER';
     }
 
     _buildSystemPrompt() {
@@ -35,7 +49,12 @@ export class Agent {
             schema: t.schema
         })), null, 2);
 
-        const promptFn = PROMPTS[this.profile]?.system || PROMPTS['high'].system;
+        // Get prompt for current profile, with fallback for legacy names
+        const promptKey = this.profile === 'LOW_POWER' ? 'LOW_POWER' : 
+                         this.profile === 'HIGH_POWER' ? 'HIGH_POWER' : 
+                         this.profile;
+        
+        const promptFn = PROMPTS[promptKey]?.system || PROMPTS['HIGH_POWER'].system;
         return promptFn(toolsJson);
     }
 
@@ -86,13 +105,14 @@ export class Agent {
         while (turns < maxTurns) {
             turns++;
 
-            // History Management based on Profile
+            // History Management based on Power Mode
             let history;
-            if (this.profile === 'low') {
-                // Low End: Zero previous history. Only current run's context.
+            if (this.profile === 'LOW_POWER') {
+                // LOW POWER Mode: Zero previous history. Only current run's context.
+                // Optimized for Raspberry Pi and low-end devices with limited memory
                 history = this.memory.getMessages().slice(runStartIndex);
             } else {
-                // High End: Full history
+                // HIGH POWER Mode: Full conversation history for better context
                 history = this.memory.getMessages();
             }
 
