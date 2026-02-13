@@ -82,65 +82,90 @@ export class Agent {
             if (onUpdate) onUpdate({ type: 'thinking', message: 'Generating response...' });
 
             // Call LLM
+            console.log(chalk.gray(`[LLM] Requesting response...`));
             const responseText = await this.llm.chat(messages);
+            console.log(chalk.cyan(`[LLM] Raw Output:\n${responseText}`));
 
-            // Parse Response
-            let action;
+            // Parse Response - Support Multiple Actions
+            let actions = [];
             try {
-                // Try finding JSON object in response
-                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    action = JSON.parse(jsonMatch[0]);
-                } else {
-                    // Fallback for chat mode or failed parse
-                    action = { answer: responseText };
+                // Find ALL JSON objects in the response
+                const regex = /\{[\s\S]*?\}/g;
+                let match;
+                while ((match = regex.exec(responseText)) !== null) {
+                    try {
+                        const parsed = JSON.parse(match[0]);
+                        if (parsed.tool || parsed.answer) {
+                            actions.push(parsed);
+                        }
+                    } catch (e) {
+                        // Ignore invalid JSON chunks
+                    }
+                }
+
+                // Fallback if no valid JSON found but text exists
+                if (actions.length === 0) {
+                    actions.push({ answer: responseText });
                 }
             } catch (e) {
-                // console.error("JSON Parse Error:", e);
-                action = { answer: responseText }; // Fallback
+                console.error(chalk.red("JSON Parse Error:"), e.message);
+                actions.push({ answer: responseText });
             }
 
-            // Handle Action
-            if (action.answer) {
-                this.memory.addMessage('assistant', responseText); // Store full raw response
-                if (onUpdate) onUpdate({ type: 'answer', message: action.answer });
-                return action.answer;
+            // Execute Actions
+            let finalAnswer = null;
 
-            } else if (action.tool) {
-                const toolName = action.tool;
-                const toolArgs = action.args || {};
+            for (const action of actions) {
+                if (action.answer) {
+                    this.memory.addMessage('assistant', JSON.stringify(action));
+                    if (onUpdate) onUpdate({ type: 'answer', message: action.answer });
+                    console.log(chalk.green(`[Agent] Answer: ${action.answer}`));
+                    finalAnswer = action.answer;
 
-                console.log(chalk.yellow(`[Tool] ${toolName} args: ${JSON.stringify(toolArgs)}`));
-                if (onUpdate) onUpdate({ type: 'tool', tool: toolName, args: toolArgs });
+                } else if (action.tool) {
+                    const toolName = action.tool;
+                    const toolArgs = action.args || {};
 
-                const tool = this.tools.get(toolName);
-                let toolResult = "";
+                    console.log(chalk.yellow(`[Tool] Executing: ${toolName}`));
+                    console.log(chalk.gray(`[Tool] Args: ${JSON.stringify(toolArgs)}`));
 
-                if (tool) {
-                    try {
-                        // Special case for Gmail Auth which needs manual intervention often
-                        // checking schema might be good but let's just run it
-                        const result = await tool.func(toolArgs);
-                        toolResult = typeof result === 'string' ? result : JSON.stringify(result);
-                    } catch (err) {
-                        toolResult = `Error executing tool ${toolName}: ${err.message}`;
+                    if (onUpdate) {
+                        onUpdate({ type: 'tool', tool: toolName, args: toolArgs });
+                        onUpdate({ type: 'log', message: `Executing tool: ${toolName}` });
                     }
-                } else {
-                    toolResult = `Error: Tool "${toolName}" not found.`;
+
+                    const tool = this.tools.get(toolName);
+                    let toolResult = "";
+
+                    if (tool) {
+                        try {
+                            const result = await tool.func(toolArgs);
+                            toolResult = typeof result === 'string' ? result : JSON.stringify(result);
+                        } catch (err) {
+                            toolResult = `Error executing tool ${toolName}: ${err.message}`;
+                        }
+                    } else {
+                        toolResult = `Error: Tool "${toolName}" not found.`;
+                    }
+
+                    console.log(chalk.blue(`[Tool] Result: ${toolResult.substring(0, 100)}...`));
+
+                    // Add observation
+                    this.memory.addMessage('assistant', JSON.stringify(action));
+                    this.memory.addMessage('user', `Tool Output: ${toolResult}`);
+
+                    if (onUpdate) onUpdate({ type: 'observation', message: toolResult.substring(0, 100) + "..." });
                 }
-
-                // Add observation to memory
-                // We mock the assistant's tool call in memory so the LLM knows it happened
-                // Ideally we'd store the specific tool call format but raw text works for Llama usually
-                this.memory.addMessage('assistant', JSON.stringify(action));
-                this.memory.addMessage('user', `Tool Output: ${toolResult}`);
-
-                if (onUpdate) onUpdate({ type: 'observation', message: toolResult.substring(0, 100) + "..." });
-
-                // Continue loop
-            } else {
-                return "Error: Invalid response format from Agent.";
             }
+
+            // If we found an answer, we can stop, or we continue if there were tools
+            if (finalAnswer) return finalAnswer;
+
+            // If we executed tools but no answer yet, the loop continues to generate next response
+            // unless we want to force an answer? usually LLM sees tool output and generates answer next turn.
+            if (actions.some(a => a.tool)) continue;
+
+            return "Error: No valid action found.";
         }
 
         return "Error: Maximum turns reached.";

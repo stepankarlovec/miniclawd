@@ -154,6 +154,9 @@ export class WebServer {
                     if (data.type === 'tool') {
                         this.io.emit('system-log', { type: 'info', message: `Agent using tool: ${data.tool}` });
                     }
+                    if (data.type === 'log') {
+                        this.io.emit('system-log', { type: 'info', message: data.message });
+                    }
                 };
 
                 const response = await this.agent.run(message, onUpdate);
