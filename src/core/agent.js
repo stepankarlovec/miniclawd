@@ -2,10 +2,15 @@ import { Memory } from './memory.js';
 import { PROMPTS } from './prompts.js';
 import chalk from 'chalk';
 
+// Pre-compile regex patterns for better performance
+const JSON_REGEX = /\{[\s\S]*?\}/g;
+const THINK_REGEX = /<think>([\s\S]*?)<\/think>/;
+
 export class Agent {
     constructor(llm, tools = [], options = {}) {
         this.llm = llm;
         this.profile = options.profile || 'high'; // 'high', 'low', 'chat'
+        this.timeout = options.timeout || 30000; // Default 30s timeout
 
         // If chat mode, we disable tools completely to prevent hallucinations
         if (this.profile === 'chat') {
@@ -14,7 +19,12 @@ export class Agent {
             this.tools = new Map(tools.map(tool => [tool.name, tool]));
         }
 
-        this.memory = new Memory(options.memoryPath);
+        // Memory with limits based on profile
+        const memoryOptions = this.profile === 'low' 
+            ? { maxMessages: 20, maxSize: 50000 }  // Lower limits for low profile
+            : { maxMessages: 100, maxSize: 100000 }; // Default limits
+        
+        this.memory = new Memory(options.memoryPath, memoryOptions);
         this.systemPrompt = this._buildSystemPrompt();
     }
 
@@ -43,9 +53,9 @@ export class Agent {
             try {
                 const rawResponse = await this.llm.chat(messages);
 
-                // Extract thinking even in chat mode
+                // Extract thinking even in chat mode (use pre-compiled regex)
                 let finalResponse = rawResponse;
-                const thinkMatch = rawResponse.match(/<think>([\s\S]*?)<\/think>/);
+                const thinkMatch = rawResponse.match(THINK_REGEX);
 
                 if (thinkMatch) {
                     const thoughtContent = thinkMatch[1].trim();
@@ -98,13 +108,12 @@ export class Agent {
             const responseText = await this.llm.chat(messages);
             console.log(chalk.cyan(`[LLM] Raw Output:\n${responseText}`));
 
-            // Parse Response - Support Multiple Actions
+            // Parse Response - Support Multiple Actions (optimized single-pass)
             let actions = [];
             try {
-                // Find ALL JSON objects in the response
-                const regex = /\{[\s\S]*?\}/g;
-                let match;
-                while ((match = regex.exec(responseText)) !== null) {
+                // Use pre-compiled regex for better performance
+                const matches = responseText.matchAll(JSON_REGEX);
+                for (const match of matches) {
                     try {
                         const parsed = JSON.parse(match[0]);
                         if (parsed.tool || parsed.answer) {

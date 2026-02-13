@@ -8,6 +8,8 @@ import { ScriptExecutionTool } from './tools/script.js';
 import { WeatherTool, CoinGeckoTool, RandomFactTool } from './tools/api.js';
 import { GmailManager, GmailAuthTool, GmailSendTool, GmailReadTool } from './tools/gmail.js';
 import { webTools } from './tools/web.js';
+import { SystemInfoTool, MemoryStatsTool, ClearMemoryTool, ThrottleDetectionTool } from './tools/system.js';
+import { PerformanceMetricsTool } from './tools/performance.js';
 import { TelegramBot } from './server/telegram.js';
 import { WebServer } from './server/server.js';
 import readline from 'readline';
@@ -48,7 +50,10 @@ async function main() {
             if (!config.openai_api_key) console.warn(chalk.yellow("Warning: OpenAI API Key missing in config."));
             llm = new OpenAIProvider(config.openai_api_key, config.model_name);
         } else {
-            llm = new OllamaProvider(config.model_name);
+            llm = new OllamaProvider(config.model_name, { 
+                timeout: 30000,
+                enableStreaming: config.enable_streaming || false 
+            });
         }
     } catch (e) {
         console.error(chalk.red("LLM Provider Init Error:"), e);
@@ -58,7 +63,19 @@ async function main() {
     const gmailManager = new GmailManager(configManager);
     await gmailManager.init();
 
-    // Initialize Tools
+    // Initialize Agent first (without memory-dependent tools)
+    let agent;
+    try {
+        agent = new Agent(llm, [], {
+            memoryPath: path.join(DATA_DIR, 'memory.json'),
+            profile: config.agent_profile || 'high'
+        });
+    } catch (e) {
+        console.error(chalk.red("Agent Init Error:"), e);
+        process.exit(1);
+    }
+
+    // Initialize Tools (now we can pass agent to memory-dependent tools)
     const tools = [
         new ListDirTool(),
         new ReadFileTool(),
@@ -71,19 +88,18 @@ async function main() {
         new GmailAuthTool(gmailManager),
         new GmailSendTool(gmailManager),
         new GmailReadTool(gmailManager),
+        new SystemInfoTool(),
+        new ThrottleDetectionTool(),
+        new MemoryStatsTool(agent),
+        new ClearMemoryTool(agent),
+        new PerformanceMetricsTool(),
         ...webTools // Add Web Tools (Search + Read)
     ];
 
-    // Initialize Agent
-    let agent;
-    try {
-        agent = new Agent(llm, tools, {
-            memoryPath: path.join(DATA_DIR, 'memory.json'),
-            profile: config.agent_profile || 'high'
-        });
-    } catch (e) {
-        console.error(chalk.red("Agent Init Error:"), e);
-        process.exit(1);
+    // Update agent tools
+    if (agent.profile !== 'chat') {
+        agent.tools = new Map(tools.map(tool => [tool.name, tool]));
+        agent.systemPrompt = agent._buildSystemPrompt();
     }
 
 
