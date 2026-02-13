@@ -6,10 +6,23 @@ import chalk from 'chalk';
 const JSON_REGEX = /\{[\s\S]*?\}/g;
 const THINK_REGEX = /<think>([\s\S]*?)<\/think>/;
 
+// Memory limits for different power modes (in bytes)
+const MEMORY_LIMITS = {
+    LOW_POWER: {
+        maxMessages: 20,
+        maxSize: 50000  // ~49KB - optimized for Raspberry Pi and edge devices
+    },
+    HIGH_POWER: {
+        maxMessages: 100,
+        maxSize: 200000 // ~195KB - full context for desktop/cloud deployments
+    }
+};
+
 export class Agent {
     constructor(llm, tools = [], options = {}) {
         this.llm = llm;
-        this.profile = options.profile || 'high'; // 'high', 'low', 'chat'
+        // Support both old terminology (for backwards compatibility) and new power mode names
+        this.profile = this._normalizePowerMode(options.profile || options.powerMode || 'HIGH_POWER');
         this.timeout = options.timeout || 30000; // Default 30s timeout
 
         // If chat mode, we disable tools completely to prevent hallucinations
@@ -19,13 +32,26 @@ export class Agent {
             this.tools = new Map(tools.map(tool => [tool.name, tool]));
         }
 
-        // Memory with limits based on profile
-        const memoryOptions = this.profile === 'low' 
-            ? { maxMessages: 20, maxSize: 50000 }  // Lower limits for low profile
-            : { maxMessages: 100, maxSize: 100000 }; // Default limits
+        // Memory with limits based on power mode
+        const memoryOptions = this.profile === 'LOW_POWER' 
+            ? MEMORY_LIMITS.LOW_POWER  // Minimal history for resource-constrained devices
+            : MEMORY_LIMITS.HIGH_POWER; // Full history with extended context
         
         this.memory = new Memory(options.memoryPath, memoryOptions);
         this.systemPrompt = this._buildSystemPrompt();
+    }
+
+    _normalizePowerMode(mode) {
+        // Normalize to uppercase and handle legacy names
+        const normalized = String(mode).toUpperCase();
+        
+        // Map legacy names to new power modes
+        if (normalized === 'LOW' || normalized === 'LOW_POWER') return 'LOW_POWER';
+        if (normalized === 'HIGH' || normalized === 'HIGH_POWER') return 'HIGH_POWER';
+        if (normalized === 'CHAT') return 'chat';
+        
+        // Default to HIGH_POWER for unknown modes
+        return 'HIGH_POWER';
     }
 
     _buildSystemPrompt() {
@@ -35,7 +61,12 @@ export class Agent {
             schema: t.schema
         })), null, 2);
 
-        const promptFn = PROMPTS[this.profile]?.system || PROMPTS['high'].system;
+        // Get prompt for current profile, with fallback for legacy names
+        const promptKey = this.profile === 'LOW_POWER' ? 'LOW_POWER' : 
+                         this.profile === 'HIGH_POWER' ? 'HIGH_POWER' : 
+                         this.profile;
+        
+        const promptFn = PROMPTS[promptKey]?.system || PROMPTS['HIGH_POWER'].system;
         return promptFn(toolsJson);
     }
 
@@ -86,13 +117,14 @@ export class Agent {
         while (turns < maxTurns) {
             turns++;
 
-            // History Management based on Profile
+            // History Management based on Power Mode
             let history;
-            if (this.profile === 'low') {
-                // Low End: Zero previous history. Only current run's context.
+            if (this.profile === 'LOW_POWER') {
+                // LOW POWER Mode: Zero previous history. Only current run's context.
+                // Optimized for Raspberry Pi and low-end devices with limited memory
                 history = this.memory.getMessages().slice(runStartIndex);
             } else {
-                // High End: Full history
+                // HIGH POWER Mode: Full conversation history for better context
                 history = this.memory.getMessages();
             }
 
@@ -108,19 +140,31 @@ export class Agent {
             const responseText = await this.llm.chat(messages);
             console.log(chalk.cyan(`[LLM] Raw Output:\n${responseText}`));
 
-            // Parse Response - Support Multiple Actions (optimized single-pass)
+            // Parse Response - Support Multiple Actions
             let actions = [];
             try {
-                // Use pre-compiled regex for better performance
-                const matches = responseText.matchAll(JSON_REGEX);
-                for (const match of matches) {
-                    try {
-                        const parsed = JSON.parse(match[0]);
-                        if (parsed.tool || parsed.answer) {
-                            actions.push(parsed);
+                // First, try to parse the entire response as JSON
+                try {
+                    const parsed = JSON.parse(responseText);
+                    if (parsed.tool || parsed.answer) {
+                        actions.push(parsed);
+                    }
+                } catch (directParseError) {
+                    // Direct JSON parsing failed - this is expected when LLM returns
+                    // text mixed with JSON or multiple JSON objects
+                    // Fall back to regex-based extraction
+                    console.log(chalk.gray(`[Agent] Direct JSON parse failed, using regex fallback`));
+                    
+                    const matches = responseText.matchAll(JSON_REGEX);
+                    for (const match of matches) {
+                        try {
+                            const parsed = JSON.parse(match[0]);
+                            if (parsed.tool || parsed.answer) {
+                                actions.push(parsed);
+                            }
+                        } catch (e) {
+                            // Ignore invalid JSON chunks from regex matches
                         }
-                    } catch (e) {
-                        // Ignore invalid JSON chunks
                     }
                 }
 
@@ -160,7 +204,7 @@ export class Agent {
 
                     if (tool) {
                         try {
-                            const result = await tool.func(toolArgs);
+                            const result = await tool.execute(toolArgs);
                             toolResult = typeof result === 'string' ? result : JSON.stringify(result);
                         } catch (err) {
                             toolResult = `Error executing tool ${toolName}: ${err.message}`;
