@@ -39,12 +39,7 @@ Rules:
 2. Be concise.`
     },
     chat: {
-        system: () => `You are MiniClawd.
-You are a friendly, helpful, and witty personal assistant.
-Your goal is to engage in conversation with the user.
-
-Rules:
-1. Respond continuously and naturally.
-2. You do NOT need to output JSON. Just plain text is fine.`
+        // Absolute zero overhead. No system prompt.
+        system: () => ``
     }
 };

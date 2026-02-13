@@ -30,6 +30,28 @@ export class Agent {
     }
 
     async run(userInput, onUpdate = null) {
+        // --- 1. FAST PATH: Chat Mode (Zero history, Zero tools, Raw speed) ---
+        if (this.profile === 'chat') {
+            if (onUpdate) onUpdate({ type: 'thinking', message: 'Chatting...' });
+
+            // Build message array with NO system prompt (handled in prompts.js returning empty)
+            // But we might need at least one user message
+            const messages = [
+                { role: 'user', content: userInput }
+            ];
+
+            try {
+                const response = await this.llm.chat(messages);
+                // No memory saving in fast mode to save IO ops
+                if (onUpdate) onUpdate({ type: 'answer', message: response });
+                return response;
+            } catch (e) {
+                return "Error: " + e.message;
+            }
+        }
+
+        // --- 2. STANDARD PATH: Work Mode (Tools, History) ---
+
         // Add user message to memory
         await this.memory.init();
         this.memory.addMessage('user', userInput);
@@ -40,11 +62,15 @@ export class Agent {
         while (turns < maxTurns) {
             turns++;
 
-            // 1. Prepare history for LLM
-            // For Low Profile: Limit history to last 3 turns to save tokens
-            const history = this.profile === 'low'
-                ? this.memory.getMessages().slice(-6)
-                : this.memory.getMessages();
+            // History Management based on Profile
+            let history;
+            if (this.profile === 'low') {
+                // Low End: ONLY last 2 messages for context. Ignore older history.
+                history = this.memory.getMessages().slice(-4);
+            } else {
+                // High End: Full history
+                history = this.memory.getMessages();
+            }
 
             const messages = [
                 { role: 'system', content: this.systemPrompt },
@@ -53,10 +79,10 @@ export class Agent {
 
             if (onUpdate) onUpdate({ type: 'thinking', message: 'Generating response...' });
 
-            // 2. Call LLM
+            // Call LLM
             const responseText = await this.llm.chat(messages);
 
-            // 3. Parse Response
+            // Parse Response
             let action;
             try {
                 // Try finding JSON object in response
@@ -68,11 +94,11 @@ export class Agent {
                     action = { answer: responseText };
                 }
             } catch (e) {
-                console.error("JSON Parse Error:", e);
+                // console.error("JSON Parse Error:", e);
                 action = { answer: responseText }; // Fallback
             }
 
-            // 4. Handle Action
+            // Handle Action
             if (action.answer) {
                 this.memory.addMessage('assistant', responseText); // Store full raw response
                 if (onUpdate) onUpdate({ type: 'answer', message: action.answer });
