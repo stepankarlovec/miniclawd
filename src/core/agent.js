@@ -29,66 +29,91 @@ export class Agent {
         return promptFn(toolsJson);
     }
 
-    async run(userInput) {
-        await this.memory.init();
+    async run(userInput, onUpdate = null) {
+        // Add user message to memory
         this.memory.addMessage('user', userInput);
 
-        let steps = 0;
-        const maxSteps = 10;
+        let turns = 0;
+        const maxTurns = 5; // Prevent infinite loops
 
-        while (steps < maxSteps) {
-            console.log(chalk.gray(`Thinking... (Step ${steps + 1})`));
+        while (turns < maxTurns) {
+            turns++;
 
-            // Construct messages for LLM
+            // 1. Prepare history for LLM
+            // For Low Profile: Limit history to last 3 turns to save tokens
+            const history = this.profile === 'low'
+                ? this.memory.getMessages().slice(-6)
+                : this.memory.getMessages();
+
             const messages = [
                 { role: 'system', content: this.systemPrompt },
-                ...this.memory.getMessages()
+                ...history
             ];
 
-            const response = await this.llm.chat(messages);
+            if (onUpdate) onUpdate({ type: 'thinking', message: 'Generating response...' });
 
-            // Try to parse parsing JSON
+            // 2. Call LLM
+            const responseText = await this.llm.chat(messages);
+
+            // 3. Parse Response
             let action;
             try {
-                // Strip markdown code blocks if present
-                const jsonStr = response.replace(/```json/g, '').replace(/```/g, '').trim();
-                action = JSON.parse(jsonStr);
+                // Try finding JSON object in response
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    action = JSON.parse(jsonMatch[0]);
+                } else {
+                    // Fallback for chat mode or failed parse
+                    action = { answer: responseText };
+                }
             } catch (e) {
-                console.warn(chalk.yellow("Failed to parse JSON response. Raw response:"), response);
-                // If parsing fails, treat as a final answer if it looks like text, or retry?
-                // For now, let's treat as answer to be robust.
-                return response;
+                console.error("JSON Parse Error:", e);
+                action = { answer: responseText }; // Fallback
             }
 
+            // 4. Handle Action
             if (action.answer) {
-                this.memory.addMessage('assistant', action.answer);
+                this.memory.addMessage('assistant', responseText); // Store full raw response
+                if (onUpdate) onUpdate({ type: 'answer', message: action.answer });
                 return action.answer;
-            }
 
-            if (action.tool) {
-                const tool = this.tools.get(action.tool);
+            } else if (action.tool) {
+                const toolName = action.tool;
+                const toolArgs = action.args || {};
+
+                console.log(chalk.yellow(`[Tool] ${toolName} args: ${JSON.stringify(toolArgs)}`));
+                if (onUpdate) onUpdate({ type: 'tool', tool: toolName, args: toolArgs });
+
+                const tool = this.tools.get(toolName);
+                let toolResult = "";
+
                 if (tool) {
-                    console.log(chalk.blue(`Executing tool: ${action.tool} with args:`), action.args);
                     try {
-                        const result = await tool.execute(action.args);
-                        this.memory.addMessage('assistant', JSON.stringify(action)); // Log the tool call
-                        this.memory.addMessage('user', `Tool Output: ${result}`); // Log the output
-                    } catch (error) {
-                        this.memory.addMessage('assistant', JSON.stringify(action));
-                        this.memory.addMessage('user', `Tool Execution Error: ${error.message}`);
+                        // Special case for Gmail Auth which needs manual intervention often
+                        // checking schema might be good but let's just run it
+                        const result = await tool.func(toolArgs);
+                        toolResult = typeof result === 'string' ? result : JSON.stringify(result);
+                    } catch (err) {
+                        toolResult = `Error executing tool ${toolName}: ${err.message}`;
                     }
                 } else {
-                    this.memory.addMessage('user', `Error: Tool '${action.tool}' not found.`);
+                    toolResult = `Error: Tool "${toolName}" not found.`;
                 }
-            } else {
-                // Fallback if JSON is valid but neither tool nor answer
-                this.memory.addMessage('assistant', JSON.stringify(action));
-                return "I'm not sure what to do with this response: " + JSON.stringify(action);
-            }
 
-            steps++;
+                // Add observation to memory
+                // We mock the assistant's tool call in memory so the LLM knows it happened
+                // Ideally we'd store the specific tool call format but raw text works for Llama usually
+                this.memory.addMessage('assistant', JSON.stringify(action));
+                this.memory.addMessage('user', `Tool Output: ${toolResult}`);
+
+                if (onUpdate) onUpdate({ type: 'observation', message: toolResult.substring(0, 100) + "..." });
+
+                // Continue loop
+            } else {
+                return "Error: Invalid response format from Agent.";
+            }
         }
 
-        return "Agent step limit reached.";
+        return "Error: Maximum turns reached.";
     }
 }

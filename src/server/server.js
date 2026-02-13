@@ -129,10 +129,22 @@ export class WebServer {
             if (!message) return res.status(400).json({ error: "No message" });
 
             try {
-                const response = await this.agent.run(message);
+                // Define real-time update handler
+                const onUpdate = (data) => {
+                    this.io.emit('agent-activity', data);
+
+                    // Also log significant events to system logs
+                    if (data.type === 'tool') {
+                        this.io.emit('system-log', { type: 'info', message: `Agent using tool: ${data.tool}` });
+                    }
+                };
+
+                const response = await this.agent.run(message, onUpdate);
+                this.io.emit('agent-activity', { type: 'done' }); // Signal completion
                 res.json({ response });
             } catch (error) {
                 console.error("Chat API Error:", error);
+                this.io.emit('agent-activity', { type: 'error', message: error.message });
                 res.status(500).json({ error: "Internal Server Error: " + error.message });
             }
         });

@@ -237,11 +237,46 @@ socket.on('system-log', (data) => {
     addLog(data.message, data.type);
 });
 
-function checkPending() {
-    if (approvalList.children.length === 0) {
-        document.getElementById('no-pending').style.display = 'block';
+// Real-time Agent Activity
+let statusMsgId = null;
+
+socket.on('agent-activity', (data) => {
+    const chatWindow = document.getElementById('chat-window');
+
+    // Remove existing status if exists
+    if (statusMsgId) {
+        const el = document.getElementById(statusMsgId);
+        if (el) el.remove();
+        statusMsgId = null;
     }
-}
+
+    if (data.type === 'done' || data.type === 'answer') return;
+
+    // Create new status bubble
+    const div = document.createElement('div');
+    statusMsgId = 'status-' + Date.now();
+    div.id = statusMsgId;
+    div.classList.add('message', 'assistant', 'status-message');
+
+    let content = '';
+    if (data.type === 'thinking') {
+        content = `<span class="pulse">🧠</span> Thinking...`;
+    } else if (data.type === 'tool') {
+        content = `<span class="spin">⚙️</span> Using <strong>${data.tool}</strong>...`;
+    } else if (data.type === 'observation') {
+        content = `<span>👀</span> Analyzed tool output`;
+    } else if (data.type === 'error') {
+        content = `<span>❌</span> Error: ${data.message}`;
+    }
+
+    div.innerHTML = `
+        <div class="avatar">⚡</div>
+        <div class="bubble status">${content}</div>
+    `;
+
+    chatWindow.appendChild(div);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+});
 
 window.approveUser = async (chatId) => {
     await fetch('/api/auth/approve', {
